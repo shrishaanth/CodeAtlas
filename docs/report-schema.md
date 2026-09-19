@@ -7,6 +7,10 @@ The static demo is literally a set of these files, so the UI must never need any
 Status: **draft**. Fields are expected to change during M1-M3. `schemaVersion` changes when they do.
 Example values below are illustrative only, not real measurements.
 
+**Produced today (M1):** `repo`, `limits`, `overview`, `files`, `components`, `edges` (import only),
+`readingOrder`, `people.authors`. Sections and fields marked *(M2)* or *(M3)* are planned, not yet written.
+Absent sections are omitted from the JSON rather than written as null.
+
 ## Conventions
 - **Paths** are repo-relative, use `/`, and are the identifier for a file everywhere in the report.
 - **Lines** are 1-based and inclusive (`startLine: 3, endLine: 5` is three lines).
@@ -28,10 +32,10 @@ Example values below are illustrative only, not real measurements.
   "components":  [ ... ],   // groups of files (top-level packages / directories)
   "edges":       [ ... ],   // import and co-change edges between files
   "readingOrder":[ ... ],
-  "people":      { ... },   // authors and ownership
-  "coupling":    { ... },
-  "hotspots":    [ ... ],
-  "findings":    [ ... ]
+  "people":      { ... },   // authors; ownership (M2)
+  "coupling":    { ... },   // (M2)
+  "hotspots":    [ ... ],   // (M2)
+  "findings":    [ ... ]    // (M3)
 }
 ```
 
@@ -52,7 +56,7 @@ Example values below are illustrative only, not real measurements.
 {
   "maxCommits": 20000,
   "historyTruncated": false,
-  "ignoredRevisions": ["9f1e..."],          // e.g. from .git-blame-ignore-revs
+  "ignoredRevisions": ["9f1e..."],          // (M2) e.g. from .git-blame-ignore-revs
   "skippedFiles": [ { "path": "vendor/x.py", "reason": "vendored" } ],
   "parseErrors":  [ { "path": "tests/bad.py", "startLine": 3 } ]
 }
@@ -62,7 +66,7 @@ Example values below are illustrative only, not real measurements.
 ```jsonc
 {
   "commits": 5557,
-  "contributors": 640,             // after alias merging
+  "contributors": 640,             // distinct author emails (alias merging arrives in M2)
   "firstCommitAt": "2010-04-06T...",
   "lastCommitAt": "2026-09-10T...",
   "files": 312,
@@ -80,7 +84,7 @@ Example values below are illustrative only, not real measurements.
   "lines": 1536,
   "componentId": "src/flask",
   "isTest": false,
-  "isGenerated": false,
+  "isGenerated": false,            // (M3)
   "symbols": [
     { "kind": "class", "name": "Flask", "startLine": 76, "endLine": 1530, "parent": null },
     { "kind": "function", "name": "run", "startLine": 540, "endLine": 660, "parent": "Flask" }
@@ -90,25 +94,27 @@ Example values below are illustrative only, not real measurements.
       "module": ".globals", "resolvedPath": "src/flask/globals.py", "external": false }
   ],
   "git": {
-    "commits": 812,
-    "linesAdded": 9000, "linesDeleted": 7400,
-    "firstChangedAt": "...", "lastChangedAt": "...",
-    "authorCount": 190
+    "commits": 812,                 // non-merge commits, following renames
+    "authorCount": 190,
+    "firstChangedAt": "...", "lastChangedAt": "..."
   }
 }
 ```
 `resolvedPath` is null for imports that point outside the repo (`external: true`) or could not be resolved.
+One import statement can produce several entries (`from pkg import a, b` where both are submodules).
+`symbols` and `imports` are present only for parsed (Python) files; `git` only for files some commit touched.
 
 ## `components[]`
 ```jsonc
-{ "id": "src/flask", "path": "src/flask", "files": 24, "lines": 9800, "layer": 2 }
+{ "id": "src/flask", "path": "src/flask", "files": 24, "lines": 9800 }
 ```
-`layer` comes from import direction: components that import nothing internal sit at layer 0.
+In v1 a component is a directory (`.` for the root). *(M3)* adds `layer`, from import direction:
+components that import nothing internal sit at layer 0.
 
 ## `edges[]`
 ```jsonc
 { "source": "src/flask/app.py", "target": "src/flask/globals.py", "kind": "import", "weight": 1 }
-{ "source": "src/flask/app.py", "target": "tests/test_basic.py",  "kind": "cochange", "weight": 143 }
+{ "source": "src/flask/app.py", "target": "tests/test_basic.py",  "kind": "cochange", "weight": 143 }  // (M2)
 ```
 For `import`, source imports target. For `cochange`, the pair is unordered and `weight` is the
 number of commits that changed both.
@@ -119,18 +125,19 @@ number of commits that changed both.
   "rank": 1,
   "path": "src/flask/app.py",
   "score": 0.87,
-  "parts": { "fanIn": 0.92, "centrality": 0.81, "churn": 0.75, "entryDistance": 0.9 },
-  "reasons": ["Imported by 18 of 24 files in src/flask", "Changed in 812 commits"]
+  "parts": { "centrality": 0.81, "fanIn": 0.92, "churn": 0.75 },
+  "reasons": ["Imported by 18 non-test files", "Changed in 812 commits"]
 }
 ```
-The scoring formula and weights are documented in `docs/metrics.md` (M1).
+The scoring formula and weights are documented in `docs/metrics.md`. Each part is already scaled to 0..1.
 
 ## `people`
 ```jsonc
 {
   "authors": [
-    { "id": "a1", "name": "David Lord", "emails": ["davidism@gmail.com"], "mergedFrom": [] }
+    { "id": "a1", "name": "Jane Doe", "emails": ["jane@example.org"], "commits": 1200 }
   ],
+  // (M2) from here on
   "fileOwnership": [
     { "path": "src/flask/app.py", "totalLines": 1536,
       "owners": [ { "authorId": "a1", "lines": 900, "share": 0.586 } ],
