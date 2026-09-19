@@ -92,6 +92,8 @@ Identities are merged in this order; each rule links identities, and linked iden
 
 A person's display name is the name on their most recent commit. Merging cannot be proven correct;
 the report lists every email merged into each person so it can be checked.
+The unit being merged is an email, so an email shared by several people (a team or CI account)
+counts as one person, even if `.mailmap` names them separately.
 
 **Bots** (name or email containing `[bot]`, or known automation accounts such as dependabot, renovate,
 pre-commit-ci and github-actions) are kept in the author list, marked `isBot`, and left out of ownership.

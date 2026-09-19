@@ -17,7 +17,13 @@ import java.util.Set;
 public record GitHistory(int commitsWalked, boolean truncated, Instant firstCommitAt, Instant lastCommitAt,
                          Map<String, Author> authors, Map<String, FileHistory> files, List<Commit> commits) {
 
-    public record Author(String email, String name, int commits) {
+    /**
+     * One raw identity (an email) as seen in history.
+     *
+     * @param name  name on this email's most recent commit
+     * @param names every name used with this email
+     */
+    public record Author(String email, String name, Set<String> names, int commits, Instant lastCommitAt) {
     }
 
     public record FileHistory(String path, int commits, Set<String> authorEmails,

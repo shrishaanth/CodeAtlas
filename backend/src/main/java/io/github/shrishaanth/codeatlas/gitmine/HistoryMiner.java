@@ -73,7 +73,7 @@ public class HistoryMiner {
                 if (first == null || when.isBefore(first)) first = when;
                 if (last == null || when.isAfter(last)) last = when;
                 String email = author.getEmailAddress().toLowerCase(Locale.ROOT);
-                authors.computeIfAbsent(email, e -> new AuthorAcc(email, author.getName())).commits++;
+                authors.computeIfAbsent(email, e -> new AuthorAcc(email, author.getName(), when)).add(author.getName(), when);
 
                 // Merge commits repeat changes already counted in the merged commits.
                 if (c.getParentCount() > 1) continue;
@@ -104,7 +104,8 @@ public class HistoryMiner {
         Map<String, GitHistory.FileHistory> fileHistories = new HashMap<>();
         files.forEach((p, acc) -> fileHistories.put(p, acc.toHistory()));
         Map<String, GitHistory.Author> authorMap = new HashMap<>();
-        authors.forEach((e, acc) -> authorMap.put(e, new GitHistory.Author(e, acc.name, acc.commits)));
+        authors.forEach((e, acc) -> authorMap.put(e,
+                new GitHistory.Author(e, acc.name, Set.copyOf(acc.names), acc.commits, acc.last)));
         return new GitHistory(walked, truncated, first, last, Map.copyOf(authorMap), Map.copyOf(fileHistories),
                 List.copyOf(commits));
     }
@@ -133,12 +134,25 @@ public class HistoryMiner {
 
     private static final class AuthorAcc {
         final String email;
-        final String name; // most recent name, since commits are walked newest first
+        final Set<String> names = new TreeSet<>();
+        String name;
+        Instant last;
         int commits;
 
-        AuthorAcc(String email, String name) {
+        AuthorAcc(String email, String name, Instant when) {
             this.email = email;
             this.name = name;
+            this.last = when;
+        }
+
+        void add(String commitName, Instant when) {
+            commits++;
+            names.add(commitName);
+            // Topological order is not strictly by date, so keep the name of the latest commit explicitly.
+            if (when.isAfter(last)) {
+                last = when;
+                name = commitName;
+            }
         }
     }
 }
