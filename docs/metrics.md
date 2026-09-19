@@ -18,7 +18,7 @@ Weights marked *initial* are guesses to be calibrated in M4 against baselines, n
 - `languages`: files and lines per detected language, largest first.
 - `testFileRatio`: Python test files divided by Python non-test files. It can exceed 1 (Flask: 48 test
   files, 35 source files). It is null when there are no non-test Python files.
-- `contributors`: distinct author emails (before alias merging, which arrives in M2).
+- `contributors`: people after identity merging, excluding bots (see "People: merging identities").
 - `components`: in v1, simply directories; `.` is the repository root.
 
 ## Python import resolution
@@ -80,4 +80,63 @@ not beat these on the evaluation set, the report must say so.
 - **Merge commits are skipped** for per-file counts: their changes already appear in the merged commits.
 - **Renames are followed.** If a commit renames `old.py` to `new.py`, older commits that touched
   `old.py` count toward the file's current path.
-- Authors are identified by lower-cased email. Alias merging arrives in M2.
+- Authors are identified by lower-cased email, then merged into people (next section).
+
+## People: merging identities
+One person often commits under several names or emails (work and personal email, the GitHub web UI).
+Identities are merged in this order; each rule links identities, and linked identities become one person.
+1. **`.mailmap`** at the analyzed commit, if present (git's own format for mapping identities).
+2. **Same email**, ignoring case.
+3. **Same full name**, ignoring case and extra spaces, but only if the name has at least two words.
+   Single names like `david` or `admin` are too common to merge on.
+
+A person's display name is the name on their most recent commit. Merging cannot be proven correct;
+the report lists every email merged into each person so it can be checked.
+
+**Bots** (name or email containing `[bot]`, or known automation accounts such as dependabot, renovate,
+pre-commit-ci and github-actions) are kept in the author list, marked `isBot`, and left out of ownership.
+
+## Ownership
+- Every code file at `HEAD` (known language, not documentation or data, not binary) is blamed with
+  whitespace-only changes ignored and renames followed. Without ignoring whitespace, re-indenting
+  code moves its ownership to whoever re-indented it (see `spikes/README.md`).
+- Commits listed in `.git-blame-ignore-revs` at `HEAD` (bulk reformatting) are skipped by blame,
+  so their lines go to the previous author.
+- At most `maxBlameFiles` files are blamed (default 3,000; the most-committed first). The rest are
+  listed in `limits.skippedFiles` with reason `blame cap`.
+- A file's **owners** are the people who last changed its current lines, with their share of the
+  file's human-authored lines. Lines last changed by bots are excluded.
+- **Directory ownership** adds up the blamed lines of every file below the directory.
+- **Bus factor** is the smallest number of people who together own at least half of the lines.
+  This is a simple per-file and per-directory measure, not the repository-level truck-factor
+  algorithms from research papers.
+- **Top owner active** means the top owner has a commit within 365 days before the repository's
+  last commit (measured against the repository, not today, so old repositories are judged fairly).
+- **Flags** (only for files and directories with at least 100 blamed lines):
+  `single-owner` if the bus factor is 1 and the top owner holds at least 80% of the lines;
+  `orphaned` if, additionally, the top owner is not active.
+
+## Change coupling
+Files that are often changed in the same commit, whether or not one imports the other.
+- Uses non-merge commits. Commits that touch more than **30 files** are skipped (*initial*): bulk
+  reformatting and mass renames would otherwise couple everything.
+- Only files with at least **5 commits** are considered (*initial*), to avoid coincidences.
+- For a pair A, B: `together` = commits that changed both;
+  `degree = together / average(commits of A, commits of B)`, between 0 and 1.
+  Averaging keeps a file changed in every release (a changelog) from looking coupled to everything.
+- A pair is reported if `together >= 5` and `degree >= 0.3` (*initial*), up to 300 pairs, strongest first.
+- `hasImportEdge` says whether either file imports the other. Pairs without one are hidden
+  dependencies: nothing in the code says they are related, but history does.
+- **Component coupling** does the same for top-level areas: the first directory of a path, or the
+  first two if the first is a generic container (`src`, `lib`, `libs`, `packages`, `services`,
+  `apps`, `modules`, `components`). Files at the root form `(root)`. Reported if `together >= 3`.
+
+## Hotspots
+Code that is both complicated and frequently changed, where bugs and slow reviews tend to concentrate.
+- Candidates: non-test code files at `HEAD` with at least one commit.
+- **Complexity** is indentation complexity: the sum over non-blank lines of the indentation depth
+  (leading spaces divided by 4, a tab counting as 4 spaces). It works for every language and tracks
+  nesting, which line counts do not.
+- `score = log(1+commits)/log(1+max commits) * log(1+complexity)/log(1+max complexity)`.
+  Multiplying means a file must be both busy and complicated to rank high.
+- The top 50 are reported with their raw commits, lines and complexity.
