@@ -51,7 +51,7 @@ CodeAtlas/
 - Write `docs/report-schema.md`.
 - Exit: both spikes give a clear go/no-go. If A fails, decide Java-with-workaround or a Python backend.
 
-### M1: Vertical slice (weeks 2-3, ~40-55 h)
+### M1: Vertical slice (weeks 2-3, ~40-55 h) -- DONE 2026-09-19
 Clone a repo, parse Python imports and symbols, mine git, build the import graph, compute a first
 reading order, and show the graph and ranked list in the UI. Ugly is fine. End to end is the goal.
 - Exit: analyzing a public Python repo shows a clickable graph and a reading order with score components.
@@ -68,6 +68,15 @@ Overview page, ownership views, JSON export, background job runner with progress
 Run on ~20 Python repos. Compare reading order and ownership against independent sources
 (contributor docs, CODEOWNERS, maintainers list). Report results honestly, including failures, in `docs/evaluation.md`.
 Also compare against a baseline (e.g. rank by file size or plain import count) so the claim is measured.
+
+**Known issue to test first (seen in M1 on 3 of 3 repos):** reading order v1 puts low-level files that
+everything imports at the top: `_compat.py` and `_winconsole.py` in click, `exc.py` in itsdangerous,
+`globals.py` in flask. A newcomer would rather start with the core concepts (`core.py`, `serializer.py`,
+`app.py`). PageRank passes importance down to whatever central files import, which favours foundations.
+Ideas to evaluate against baselines, not to adopt on a hunch: lower the centrality weight, penalise
+private `_module.py` files, use reverse PageRank (files that *use* much of the codebase), or order by
+dependency layers instead of a single score. Also check the 5-line candidate threshold and whether
+`examples/` should be ranked with library code.
 
 ### M5: Q&A, optional (weeks 10-11, ~30-40 h)
 Chunk code, keyword index plus embeddings, retrieval, LLM answer with `path:line` citations and shown source code.

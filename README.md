@@ -5,8 +5,19 @@ start reading, who owns what, which files change together, hotspots and concrete
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
 number can be traced back to a file, line or commit. An LLM is optional and only used for Q&A.
 
-> **Status:** early development (milestone M0 of [PLAN.md](PLAN.md) done: skeleton and risk spikes).
-> The analysis itself is not built yet.
+> **Status:** early development. Milestone M1 of [PLAN.md](PLAN.md) is done: a GitHub repository can be
+> analyzed end to end (Python imports, git history, import graph, reading order). Ownership, change coupling,
+> hotspots and findings come in M2-M3. Reading order is not yet evaluated; see the known issue in PLAN.md (M4).
+
+## What it produces today
+- **Overview:** commits, contributors, files, lines of code, languages, test-file ratio, history span.
+- **Reading order:** Python files ranked by centrality in the import graph, fan-in and churn, each with the
+  parts of its score and plain-language reasons. Definitions: [docs/metrics.md](docs/metrics.md).
+- **Import graph:** interactive, grouped by directory, showing what a file imports and what imports it.
+- **File details:** imports (in-repo, external, unresolved), importers, definitions with GitHub links.
+- **JSON export** of the whole report. Format: [docs/report-schema.md](docs/report-schema.md).
+
+Pre-computed reports in `frontend/public/demo/` open without any backend.
 
 ## Run locally
 
@@ -16,7 +27,24 @@ Requires Docker.
 docker compose up --build
 ```
 
-Then open http://localhost:3000. The API is at http://localhost:8080 (`/api/info`, `/actuator/health`).
+Then open http://localhost:3000. The API is at http://localhost:8080.
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/analyses` with `{"repo": "https://github.com/owner/repo"}` | Queue an analysis (202) |
+| `GET /api/analyses/{id}` | Status and progress |
+| `GET /api/analyses/{id}/report` | The report JSON, once done |
+| `GET /api/analyses` | Recently completed analyses |
+| `GET /api/info`, `GET /actuator/health` | Version and health |
+
+### Offline analysis (no server or database)
+Writes a report JSON file; used for the demo reports and the evaluation.
+```bash
+cd backend
+./mvnw -q compile dependency:build-classpath -Dmdep.outputFile=cp.txt
+java -cp "target/classes:$(cat cp.txt)" io.github.shrishaanth.codeatlas.cli.AnalyzeCommand https://github.com/pallets/flask ../frontend/public/demo/flask.json
+```
+(On Windows use `;` instead of `:` in the classpath.)
 
 ### Without Docker (development)
 ```bash
@@ -35,6 +63,10 @@ All settings come from environment variables.
 | `DATABASE_USER` / `DATABASE_PASSWORD` | backend | `codeatlas` / `codeatlas` |
 | `PORT` | backend | `8080` |
 | `CODEATLAS_CORS_ALLOWED_ORIGINS` | backend | `http://localhost:5173` |
+| `CODEATLAS_ALLOW_LOCAL_PATHS` | backend: accept filesystem paths (never on a public server) | `false` |
+| `CODEATLAS_MAX_COMMITS` | backend: history walk cap | `20000` |
+| `CODEATLAS_CLONE_TIMEOUT_SECONDS` | backend | `120` |
+| `CODEATLAS_MAX_QUEUED` | backend: waiting analyses before refusing | `20` |
 | `VITE_API_BASE_URL` | frontend (build time) | empty, meaning same origin |
 
 ## Repository layout
@@ -47,4 +79,5 @@ All settings come from environment variables.
 | `spikes/` | Throwaway experiments and their measured results |
 
 ## Tech stack
-Java 17, Spring Boot 4, Tree-sitter (JNI binding), JGit, PostgreSQL, React, TypeScript, Vite, Docker Compose, GitHub Actions.
+Java 17, Spring Boot 4, Tree-sitter (JNI binding), JGit, PostgreSQL, React, TypeScript, Vite, Cytoscape.js,
+Docker Compose, GitHub Actions. Backend tests use Testcontainers (Postgres in Docker).
