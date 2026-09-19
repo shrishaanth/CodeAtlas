@@ -1,0 +1,10 @@
+# Store text with LF in the repo; files used inside Linux containers must not get CRLF.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.jar binary
+*.png binary
+*.ico binary
