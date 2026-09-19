@@ -15,6 +15,7 @@
   --node-test: #a8a29e;
   --group: #f5f5f4;
   --edge: #cbd5e1;
+  --cochange: #9333ea;
 
   /* Languages bar */
   --lang-0: #2563eb;
@@ -51,6 +52,7 @@
     --node-test: #57534e;
     --group: #1c1917;
     --edge: #44403c;
+    --cochange: #c084fc;
 
     --lang-0: #60a5fa;
     --lang-1: #2dd4bf;
@@ -597,4 +599,139 @@ ul.plain li {
 
 .recent li {
   padding: 4px 0;
+}
+
+/* ---- Tables and small parts (ownership, coupling, hotspots) ---------------------------- */
+
+.stack {
+  display: grid;
+  gap: 20px;
+}
+
+.stack h3 {
+  margin: 0 0 8px;
+}
+
+.stack p {
+  margin: 0 0 8px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.filters label {
+  white-space: nowrap;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+table.data th,
+table.data td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+table.data th {
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+table.data tr:last-child td {
+  border-bottom: none;
+}
+
+table.data .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0 8px;
+  margin-right: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.pill-warn {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.pill-err {
+  border-color: var(--err);
+  color: var(--err);
+}
+
+.bar {
+  display: inline-block;
+  width: 100px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.legend-co {
+  color: var(--cochange);
+  font-weight: 600;
+}
+
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.tabs {
+  overflow-x: auto;
+}
+
+.tabs button {
+  white-space: nowrap;
 }

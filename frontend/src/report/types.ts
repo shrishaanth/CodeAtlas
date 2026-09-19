@@ -11,6 +11,8 @@ export interface Report {
   edges: Edge[]
   readingOrder: ReadingItem[]
   people?: People
+  coupling?: Coupling
+  hotspots?: Hotspot[]
 }
 
 export interface RepoInfo {
@@ -25,6 +27,7 @@ export interface RepoInfo {
 export interface Limits {
   maxCommits: number
   historyTruncated: boolean
+  ignoredRevisions?: string[]
   skippedFiles: { path: string; reason: string }[]
   parseErrors: { path: string; startLine: number }[]
 }
@@ -90,7 +93,73 @@ export interface ReadingItem {
 }
 
 export interface People {
-  authors: { id: string; name: string; emails: string[]; commits: number }[]
+  authors: Author[]
+  fileOwnership?: Ownership[]
+  directoryOwnership?: Ownership[]
+}
+
+export interface Author {
+  id: string
+  name: string
+  emails: string[]
+  commits: number
+  isBot?: boolean
+  lastCommitAt?: string
+}
+
+export type OwnershipFlag = 'single-owner' | 'orphaned'
+
+export interface Ownership {
+  path: string
+  totalLines: number
+  owners: { authorId: string; lines: number; share: number }[]
+  otherLines: number
+  ownerCount: number
+  busFactor: number
+  topOwnerActive: boolean
+  flags: OwnershipFlag[]
+}
+
+export interface Coupling {
+  files: FilePair[]
+  components: AreaPair[]
+  skippedLargeCommits: number
+}
+
+export interface FilePair {
+  a: string
+  b: string
+  together: number
+  aCommits: number
+  bCommits: number
+  degree: number
+  /** null: unknown, because at least one file's imports are not parsed */
+  hasImportEdge: boolean | null
+}
+
+export interface AreaPair {
+  a: string
+  b: string
+  together: number
+  aCommits: number
+  bCommits: number
+  degree: number
+}
+
+export interface Hotspot {
+  rank: number
+  path: string
+  score: number
+  commits: number
+  lines: number
+  complexity: number
+}
+
+// Mirrors FileClassifier.isCode in the backend.
+const NON_CODE = new Set(['markdown', 'restructuredtext', 'json', 'yaml', 'toml', 'xml', 'jupyter'])
+
+export function isCodeLanguage(language: string | null | undefined): boolean {
+  return !!language && !NON_CODE.has(language)
 }
 
 /** Link to a file (and optionally a line) on GitHub at the analyzed commit, or null for local repos. */

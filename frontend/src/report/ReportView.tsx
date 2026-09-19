@@ -1,6 +1,9 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
+import { CouplingView } from './CouplingView'
 import { FileDetails } from './FileDetails'
+import { HotspotsView } from './HotspotsView'
 import { OverviewPanel } from './OverviewPanel'
+import { OwnershipView } from './OwnershipView'
 import { ReadingOrderList } from './ReadingOrderList'
 import { formatDate } from './reportIndex'
 import { indexReport } from './reportIndex'
@@ -9,7 +12,15 @@ import type { Report } from './types'
 // Cytoscape is most of the JavaScript; load it only when the graph tab is opened.
 const ImportGraphView = lazy(() => import('./ImportGraphView').then((m) => ({ default: m.ImportGraphView })))
 
-type Tab = 'reading' | 'graph'
+const TABS = [
+  { id: 'reading', label: 'Reading order' },
+  { id: 'graph', label: 'Graph' },
+  { id: 'ownership', label: 'Ownership' },
+  { id: 'coupling', label: 'Change coupling' },
+  { id: 'hotspots', label: 'Hotspots' },
+] as const
+
+type Tab = (typeof TABS)[number]['id']
 
 /** Renders a report. Knows nothing about where it came from (static demo file or live API). */
 export function ReportView({ report }: { report: Report }) {
@@ -51,32 +62,28 @@ export function ReportView({ report }: { report: Report }) {
 
       <OverviewPanel report={report} />
 
-      {(report.limits.parseErrors.length > 0 || report.limits.skippedFiles.length > 0) && (
-        <p className="muted small">
-          {report.limits.parseErrors.length > 0 &&
-            `${report.limits.parseErrors.length} file(s) had syntax errors and were parsed partially. `}
-          {report.limits.skippedFiles.length > 0 &&
-            `${report.limits.skippedFiles.length} file(s) over 1 MB were not parsed.`}
-        </p>
-      )}
+      <Limitations report={report} />
 
       <div className="report-body">
         <div className="report-main">
           <div className="tabs" role="tablist">
-            <button type="button" role="tab" aria-selected={tab === 'reading'} onClick={() => setTab('reading')}>
-              Reading order
-            </button>
-            <button type="button" role="tab" aria-selected={tab === 'graph'} onClick={() => setTab('graph')}>
-              Import graph
-            </button>
+            {TABS.map((t) => (
+              <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}>
+                {t.label}
+              </button>
+            ))}
           </div>
-          {tab === 'reading' ? (
+          {tab === 'reading' && (
             <ReadingOrderList items={report.readingOrder} selected={selected} onSelect={setSelected} />
-          ) : (
+          )}
+          {tab === 'graph' && (
             <Suspense fallback={<p className="muted">Loading graph…</p>}>
               <ImportGraphView report={report} index={index} selected={selected} onSelect={setSelected} />
             </Suspense>
           )}
+          {tab === 'ownership' && <OwnershipView report={report} index={index} onSelect={setSelected} />}
+          {tab === 'coupling' && <CouplingView report={report} index={index} onSelect={setSelected} />}
+          {tab === 'hotspots' && <HotspotsView report={report} onSelect={setSelected} />}
         </div>
         <aside className="report-side card">
           <FileDetails report={report} index={index} path={selected} onSelect={setSelected} />
@@ -84,4 +91,22 @@ export function ReportView({ report }: { report: Report }) {
       </div>
     </div>
   )
+}
+
+function Limitations({ report }: { report: Report }) {
+  const { parseErrors, skippedFiles, ignoredRevisions, historyTruncated, maxCommits } = report.limits
+  const tooLarge = skippedFiles.filter((s) => s.reason === 'larger than 1 MB').length
+  const overBlameCap = skippedFiles.filter((s) => s.reason === 'blame cap').length
+  const blameFailed = skippedFiles.filter((s) => s.reason.startsWith('blame failed')).length
+  const notes = [
+    historyTruncated && `History was capped at the newest ${maxCommits.toLocaleString()} commits.`,
+    parseErrors.length > 0 && `${parseErrors.length} file(s) had syntax errors and were parsed partially.`,
+    tooLarge > 0 && `${tooLarge} file(s) over 1 MB were not parsed.`,
+    overBlameCap > 0 && `${overBlameCap} file(s) were not blamed (cap reached; the most-changed files were blamed first).`,
+    blameFailed > 0 && `Blame failed for ${blameFailed} file(s).`,
+    (ignoredRevisions?.length ?? 0) > 0 &&
+      `Blame skipped ${ignoredRevisions!.length} bulk-formatting commit(s) listed in .git-blame-ignore-revs.`,
+  ].filter(Boolean)
+  if (notes.length === 0) return null
+  return <p className="muted small">{notes.join(' ')}</p>
 }

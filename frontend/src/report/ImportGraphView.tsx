@@ -26,14 +26,16 @@ export function ImportGraphView({ report, index, selected, onSelect }: Props) {
   // instead of rebuilding (and re-laying-out) the graph whenever the parent re-renders.
   const onSelectRef = useRef(onSelect)
   const [includeTests, setIncludeTests] = useState(false)
+  const [showCochange, setShowCochange] = useState(false)
+  const hasCochange = report.edges.some((e) => e.kind === 'cochange')
 
   useEffect(() => {
     onSelectRef.current = onSelect
   }, [onSelect])
 
   const { elements, shown, total } = useMemo(
-    () => buildElements(report, index, includeTests),
-    [report, index, includeTests],
+    () => buildElements(report, index, includeTests, showCochange),
+    [report, index, includeTests, showCochange],
   )
 
   useEffect(() => {
@@ -88,11 +90,21 @@ export function ImportGraphView({ report, index, selected, onSelect }: Props) {
           },
         },
         {
+          selector: 'edge[kind = "cochange"]',
+          style: {
+            'line-style': 'dashed',
+            'line-color': color('--cochange'),
+            'target-arrow-shape': 'none',
+            width: 'data(width)',
+          },
+        },
+        {
           selector: 'node.selected',
           style: { 'background-color': color('--accent'), 'border-width': 3, 'border-color': color('--accent') },
         },
         { selector: 'edge.out', style: { 'line-color': color('--accent'), 'target-arrow-color': color('--accent'), width: 2 } },
         { selector: 'edge.in', style: { 'line-color': color('--warn'), 'target-arrow-color': color('--warn'), width: 2 } },
+        { selector: 'edge.co', style: { 'line-color': color('--cochange'), width: 3 } },
       ],
       layout: {
         name: 'fcose',
@@ -117,13 +129,14 @@ export function ImportGraphView({ report, index, selected, onSelect }: Props) {
   useEffect(() => {
     const instance = cy.current
     if (!instance) return
-    instance.elements().removeClass('selected out in')
+    instance.elements().removeClass('selected out in co')
     if (!selected) return
     const node = instance.getElementById(selected)
     if (node.empty()) return
     node.addClass('selected')
-    node.outgoers('edge').addClass('out')
-    node.incomers('edge').addClass('in')
+    node.outgoers('edge[kind = "import"]').addClass('out')
+    node.incomers('edge[kind = "import"]').addClass('in')
+    node.connectedEdges('edge[kind = "cochange"]').addClass('co')
   }, [selected, elements])
 
   return (
@@ -134,17 +147,24 @@ export function ImportGraphView({ report, index, selected, onSelect }: Props) {
           importer to imported. <span className="legend-out">Blue</span>: what the selected file imports.{' '}
           <span className="legend-in">Amber</span>: files that import it.
         </span>
-        <label className="small">
-          <input type="checkbox" checked={includeTests} onChange={(e) => setIncludeTests(e.target.checked)} /> Include
-          tests
-        </label>
+        <span className="filters small">
+          <label>
+            <input type="checkbox" checked={includeTests} onChange={(e) => setIncludeTests(e.target.checked)} /> Tests
+          </label>
+          {hasCochange && (
+            <label title="Dashed lines join files that often change in the same commits">
+              <input type="checkbox" checked={showCochange} onChange={(e) => setShowCochange(e.target.checked)} />{' '}
+              <span className="legend-co">Co-change</span>
+            </label>
+          )}
+        </span>
       </div>
       <div ref={container} className="graph" role="img" aria-label="Import graph of the repository" />
     </div>
   )
 }
 
-function buildElements(report: Report, index: ReportIndex, includeTests: boolean) {
+function buildElements(report: Report, index: ReportIndex, includeTests: boolean, showCochange: boolean) {
   const python = report.files.filter((f) => f.language === 'python' && (includeTests || !f.isTest))
   // Ranked files first (by score), then unranked ones (tests, tiny files) by how many files import them.
   const score = (path: string) => {
@@ -175,8 +195,14 @@ function buildElements(report: Report, index: ReportIndex, includeTests: boolean
     elements.push({ data: { id: `dir:${g}`, label: g === '.' ? '(root)' : g, isFile: false } })
   }
   for (const e of report.edges) {
-    if (e.kind === 'import' && keep.has(e.source) && keep.has(e.target)) {
-      elements.push({ data: { id: `${e.source}->${e.target}`, source: e.source, target: e.target } })
+    if (!keep.has(e.source) || !keep.has(e.target)) continue
+    if (e.kind === 'import') {
+      elements.push({ data: { id: `${e.source}->${e.target}`, source: e.source, target: e.target, kind: 'import' } })
+    } else if (e.kind === 'cochange' && showCochange) {
+      const width = Math.min(4, 1 + Math.log2(e.weight) / 2)
+      elements.push({
+        data: { id: `${e.source}~${e.target}`, source: e.source, target: e.target, kind: 'cochange', width },
+      })
     }
   }
   return { elements, shown: chosen.length, total: python.length }

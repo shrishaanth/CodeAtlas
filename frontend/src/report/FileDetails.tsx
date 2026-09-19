@@ -1,7 +1,9 @@
 import type { Report } from './types'
 import { sourceUrl } from './types'
+import { ImportEdge } from './CouplingView'
+import { Flags } from './OwnershipView'
 import type { ReportIndex } from './reportIndex'
-import { formatDate } from './reportIndex'
+import { authorName, formatDate, formatPercent } from './reportIndex'
 
 interface Props {
   report: Report
@@ -28,6 +30,8 @@ export function FileDetails({ report, index, path, onSelect }: Props) {
   ].sort()
   const unresolved = (file.imports ?? []).filter((i) => !i.resolvedPath && !i.external)
   const url = sourceUrl(report.repo, path)
+  const ownership = index.fileOwnership.get(path)
+  const coupled = index.coupled.get(path) ?? []
 
   return (
     <div className="details">
@@ -64,6 +68,50 @@ export function FileDetails({ report, index, path, onSelect }: Props) {
           </>
         )}
       </dl>
+
+      {ownership && (
+        <section>
+          <h4>
+            Owners ({ownership.ownerCount}) · bus factor {ownership.busFactor}
+          </h4>
+          <ul className="plain">
+            {ownership.owners.map((w) => (
+              <li key={w.authorId}>
+                {authorName(index, w.authorId)}{' '}
+                <span className="muted">
+                  {formatPercent(w.share)} ({w.lines} lines)
+                </span>
+              </li>
+            ))}
+            {ownership.otherLines > 0 && <li className="muted">others: {ownership.otherLines} lines</li>}
+          </ul>
+          {ownership.flags.length > 0 && (
+            <p>
+              <Flags o={ownership} />
+            </p>
+          )}
+        </section>
+      )}
+      {coupled.length > 0 && (
+        <section>
+          <h4>Usually changes with ({coupled.length})</h4>
+          <ul className="plain">
+            {coupled.slice(0, 10).map((p) => {
+              const other = p.a === path ? p.b : p.a
+              return (
+                <li key={other}>
+                  <button type="button" className="link-button" onClick={() => onSelect(other)}>
+                    {other}
+                  </button>{' '}
+                  <span className="muted">
+                    {p.together} commits · <ImportEdge pair={p} />
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
 
       <PathList title="Imported by" paths={importers} onSelect={onSelect} empty="No non-test file imports this one." />
       {testImporters.length > 0 && (
