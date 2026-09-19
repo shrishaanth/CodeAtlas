@@ -155,7 +155,9 @@ Code that is both complicated and frequently changed, where bugs and slow review
 
 ## Layers and import cycles
 Computed on directories (the v1 components) using resolved imports between non-test Python files.
-- Directory A **depends on** directory B if some file in A imports a file in B.
+- Directory A **depends on** directory B if some file in A imports a file in B. Imports made by
+  `__init__.py` files are left out: a package's `__init__.py` usually re-exports its submodules while
+  those submodules import from the package, which would make nearly every package look circular.
 - Directories that depend on each other, directly or through others, form an **import cycle**
   (a strongly connected component). Each cycle becomes one finding.
 - **Layer** of a directory: 0 if it depends on no other directory; otherwise one more than the highest
