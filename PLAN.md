@@ -8,7 +8,7 @@ Most output is computed from code and git history (deterministic). The LLM is op
 | Topic | Decision |
 |---|---|
 | Purpose | Student resume project, not a product |
-| Backend | Java + Spring Boot, Maven |
+| Backend | Java 17 + Spring Boot 4, Maven. Tree-sitter via the `bonede` JNI binding, JGit (see `spikes/README.md`) |
 | Analyzed language (v1) | Python only. Git-based features work on any repo. |
 | Frontend | React + TypeScript + Vite, Cytoscape.js, Monaco |
 | Storage | PostgreSQL (pgvector only if Q&A is built) |
@@ -42,7 +42,7 @@ CodeAtlas/
 
 ## Milestones (about 210-290 h; at 20 h/week roughly 10-14 weeks)
 
-### M0: Setup and risk spikes (week 1, ~10-15 h)
+### M0: Setup and risk spikes (week 1, ~10-15 h) -- DONE 2026-09-19, both spikes GO
 - Skeleton: backend and frontend boot, Docker Compose, CI that builds both.
 - **Spike A: Tree-sitter from Java.** Parse one Python file and list imports. Two known bindings exist
   (the official `jtreesitter`, and JNI-based ones). From memory, the official one may need JDK 22+,
