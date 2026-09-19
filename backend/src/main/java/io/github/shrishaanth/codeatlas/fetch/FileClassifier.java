@@ -21,7 +21,15 @@ public final class FileClassifier {
             Map.entry("json", "json"), Map.entry("yml", "yaml"), Map.entry("yaml", "yaml"),
             Map.entry("toml", "toml"), Map.entry("xml", "xml"), Map.entry("ipynb", "jupyter"));
 
+    /** Languages that are documentation or data rather than code (excluded from LOC, blame and hotspots). */
+    private static final java.util.Set<String> NON_CODE = java.util.Set.of(
+            "markdown", "restructuredtext", "json", "yaml", "toml", "xml", "jupyter");
+
     private FileClassifier() {
+    }
+
+    public static boolean isCode(String language) {
+        return language != null && !NON_CODE.contains(language);
     }
 
     public static String language(String path) {

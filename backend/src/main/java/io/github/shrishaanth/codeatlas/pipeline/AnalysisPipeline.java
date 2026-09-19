@@ -1,6 +1,7 @@
 package io.github.shrishaanth.codeatlas.pipeline;
 
 import io.github.shrishaanth.codeatlas.analyze.ChangeCoupling;
+import io.github.shrishaanth.codeatlas.analyze.Hotspots;
 import io.github.shrishaanth.codeatlas.analyze.ImportGraph;
 import io.github.shrishaanth.codeatlas.analyze.Ownership;
 import io.github.shrishaanth.codeatlas.analyze.ReadingOrder;
@@ -29,7 +30,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -37,10 +37,6 @@ import java.util.TreeMap;
  * Pure Java with no Spring dependencies, so the web app, tests and later a CLI can all use it.
  */
 public class AnalysisPipeline {
-
-    /** Languages counted as documentation or data, not code, for lines-of-code totals. */
-    private static final Set<String> NON_CODE = Set.of(
-            "markdown", "restructuredtext", "json", "yaml", "toml", "xml", "jupyter");
 
     /**
      * @param maxCommits    history walk cap
@@ -123,7 +119,7 @@ public class AnalysisPipeline {
 
         // 5. Blame and people ----------------------------------------------------------
         List<SourceFile> blameCandidates = files.stream()
-                .filter(f -> isCode(f) && f.parseable())
+                .filter(f -> f.isCode() && f.parseable())
                 .sorted(Comparator.comparingInt((SourceFile f) -> commitsOf(history, f.path())).reversed()
                         .thenComparing(SourceFile::path))
                 .toList();
@@ -140,7 +136,7 @@ public class AnalysisPipeline {
         Ownership.Result ownership = history.lastCommitAt() == null ? new Ownership.Result(List.of(), List.of())
                 : Ownership.compute(blame.lines(), people, history.lastCommitAt());
 
-        // 5. Analyze -----------------------------------------------------------------
+        // 6. Analyze -----------------------------------------------------------------
         progress.onProgress("analyze", 94, "Ranking files");
         List<String> candidates = python.stream()
                 .filter(f -> !f.test() && f.nonBlankLines() >= ReadingOrder.MIN_NON_BLANK_LINES)
@@ -151,6 +147,7 @@ public class AnalysisPipeline {
         List<Report.ReadingItem> readingOrder = ReadingOrder.rank(graph.restrictTo(nonTest), candidates, commitsPerFile);
 
         Report.Coupling coupling = ChangeCoupling.compute(history.commits(), graph);
+        List<Report.Hotspot> hotspots = Hotspots.rank(files, commitsPerFile);
 
         progress.onProgress("report", 98, "Assembling report");
         Report report = new Report(
@@ -164,7 +161,8 @@ public class AnalysisPipeline {
                 edges(graph, coupling),
                 readingOrder,
                 people(people, ownership),
-                coupling);
+                coupling,
+                hotspots);
         progress.onProgress("done", 100, "Analysis complete");
         return report;
     }
@@ -179,10 +177,6 @@ public class AnalysisPipeline {
             }
             return n;
         }
-    }
-
-    private static boolean isCode(SourceFile f) {
-        return f.language() != null && !NON_CODE.contains(f.language());
     }
 
     private static int commitsOf(GitHistory history, String path) {
@@ -215,7 +209,7 @@ public class AnalysisPipeline {
             int[] acc = byLanguage.computeIfAbsent(f.language(), k -> new int[2]);
             acc[0]++;
             acc[1] += f.lines();
-            if (!NON_CODE.contains(f.language())) loc += f.lines();
+            if (f.isCode()) loc += f.lines();
         }
         List<Report.LanguageStat> languages = byLanguage.entrySet().stream()
                 .map(e -> new Report.LanguageStat(e.getKey(), e.getValue()[0], e.getValue()[1]))

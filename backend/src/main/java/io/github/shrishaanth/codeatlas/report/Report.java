@@ -22,7 +22,8 @@ public record Report(
         List<Edge> edges,
         List<ReadingItem> readingOrder,
         People people,
-        Coupling coupling) {
+        Coupling coupling,
+        List<Hotspot> hotspots) {
 
     public static final String SCHEMA_VERSION = "0.1";
 
@@ -111,5 +112,9 @@ public record Report(
     }
 
     public record AreaPair(String a, String b, int together, int aCommits, int bCommits, double degree) {
+    }
+
+    /** @param complexity indentation complexity (docs/metrics.md, "Hotspots") */
+    public record Hotspot(int rank, String path, double score, int commits, int lines, int complexity) {
     }
 }

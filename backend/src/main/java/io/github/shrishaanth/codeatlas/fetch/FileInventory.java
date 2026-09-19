@@ -42,14 +42,14 @@ public class FileInventory {
 
         if (size > MAX_PARSE_BYTES) {
             // Too big to parse; still count it, but don't load it all into memory.
-            return new SourceFile(path, blobId, language, size, false, 0, 0, test, "larger than 1 MB");
+            return new SourceFile(path, blobId, language, size, false, 0, 0, 0, test, "larger than 1 MB");
         }
         byte[] bytes = loader.getBytes();
         if (looksBinary(bytes)) {
-            return new SourceFile(path, blobId, language, size, true, 0, 0, test, null);
+            return new SourceFile(path, blobId, language, size, true, 0, 0, 0, test, null);
         }
         int[] counts = countLines(bytes);
-        return new SourceFile(path, blobId, language, size, false, counts[0], counts[1], test, null);
+        return new SourceFile(path, blobId, language, size, false, counts[0], counts[1], counts[2], test, null);
     }
 
     public static String readText(Repository repo, ObjectId blobId) throws IOException {
@@ -64,9 +64,14 @@ public class FileInventory {
         return false;
     }
 
-    /** Returns {total lines, non-blank lines}. A final line without a trailing newline still counts. */
+    /**
+     * Returns {total lines, non-blank lines, indentation complexity}. A final line without a trailing
+     * newline still counts. Indentation complexity adds, per non-blank line, its leading whitespace
+     * divided by 4 (rounded down), with a tab counting as 4 spaces.
+     */
     static int[] countLines(byte[] bytes) {
-        int lines = 0, nonBlank = 0;
+        int lines = 0, nonBlank = 0, complexity = 0;
+        int indent = 0;
         boolean lineHasContent = false, lineStarted = false;
         for (byte b : bytes) {
             if (b == '\n') {
@@ -74,15 +79,24 @@ public class FileInventory {
                 if (lineHasContent) nonBlank++;
                 lineHasContent = false;
                 lineStarted = false;
+                indent = 0;
             } else {
                 lineStarted = true;
-                if (b != ' ' && b != '\t' && b != '\r' && b != '\f') lineHasContent = true;
+                if (lineHasContent) continue;
+                if (b == ' ') {
+                    indent++;
+                } else if (b == '\t') {
+                    indent += 4;
+                } else if (b != '\r' && b != '\f') {
+                    lineHasContent = true;
+                    complexity += indent / 4;
+                }
             }
         }
         if (lineStarted) {
             lines++;
             if (lineHasContent) nonBlank++;
         }
-        return new int[]{lines, nonBlank};
+        return new int[]{lines, nonBlank, complexity};
     }
 }

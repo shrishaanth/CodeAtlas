@@ -46,10 +46,19 @@ class FileInventoryTest {
 
     @Test
     void countsLinesWithAndWithoutTrailingNewline() {
-        assertThat(FileInventory.countLines("a\nb\n".getBytes())).containsExactly(2, 2);
-        assertThat(FileInventory.countLines("a\n\n  \nb".getBytes())).containsExactly(4, 2);
-        assertThat(FileInventory.countLines(new byte[0])).containsExactly(0, 0);
-        assertThat(FileInventory.countLines("a\r\n\r\n".getBytes())).containsExactly(2, 1);
+        assertThat(FileInventory.countLines("a\nb\n".getBytes())).containsExactly(2, 2, 0);
+        assertThat(FileInventory.countLines("a\n\n  \nb".getBytes())).containsExactly(4, 2, 0);
+        assertThat(FileInventory.countLines(new byte[0])).containsExactly(0, 0, 0);
+        assertThat(FileInventory.countLines("a\r\n\r\n".getBytes())).containsExactly(2, 1, 0);
+    }
+
+    @Test
+    void measuresIndentationComplexity() {
+        String nested = "def f(x):\n    if x:\n        for i in x:\n            print(i)\n\n        \n    return 1\n";
+        // Depths 0 + 1 + 2 + 3 + 1 = 7; blank and whitespace-only lines add nothing.
+        assertThat(FileInventory.countLines(nested.getBytes())[2]).isEqualTo(7);
+        assertThat(FileInventory.countLines("\tif (x) {\n\t\ty();\n".getBytes())[2]).as("tab = 4 spaces").isEqualTo(3);
+        assertThat(FileInventory.countLines("  two spaces\n".getBytes())[2]).as("partial indent rounds down").isZero();
     }
 
     @Test
