@@ -46,9 +46,12 @@ public record Report(
     public record LanguageStat(String language, int files, int lines) {
     }
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    /** {@code language} is always written (null if unknown); the optional sections are omitted when absent. */
+    @JsonInclude(JsonInclude.Include.ALWAYS)
     public record FileEntry(String path, String language, int lines, String componentId, boolean isTest,
-                            List<Symbol> symbols, List<Import> imports, FileGit git) {
+                            @JsonInclude(JsonInclude.Include.NON_NULL) List<Symbol> symbols,
+                            @JsonInclude(JsonInclude.Include.NON_NULL) List<Import> imports,
+                            @JsonInclude(JsonInclude.Include.NON_NULL) FileGit git) {
     }
 
     public record Symbol(String kind, String name, int startLine, int endLine, String parent) {

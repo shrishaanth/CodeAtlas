@@ -24,7 +24,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Full path: API service -> job queue -> pipeline -> Postgres, against a real database in Docker. */
 @SpringBootTest(properties = "codeatlas.analysis.allow-local-paths=true")
-@Testcontainers
+// Skipped where Docker is unavailable (e.g. inside the backend image build); CI runs it.
+@Testcontainers(disabledWithoutDocker = true)
 class AnalysisIntegrationTest {
 
     @Container

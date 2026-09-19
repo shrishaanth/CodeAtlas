@@ -87,7 +87,9 @@ class AnalysisPipelineTest {
     @Test
     void serializesWithSchemaFieldNames(@TempDir Path dir) throws Exception {
         try (TestRepo repo = TestRepo.create(dir)) {
-            repo.commit("alice@x.org", "init", Map.of("tests/test_a.py", "def test():\n    pass\n"));
+            repo.commit("alice@x.org", "init", Map.of(
+                    "tests/test_a.py", "def test():\n    pass\n",
+                    "Makefile", "all:\n\techo hi\n"));
             Report report;
             try (FetchedRepo fetched = new RepoFetcher(dir, 30).fetch(new RepoSource.Local(dir))) {
                 report = new AnalysisPipeline(1000, "test", Clock.systemUTC()).run(fetched, ProgressListener.NONE);
@@ -96,8 +98,14 @@ class AnalysisPipelineTest {
             JsonNode json = JsonMapper.builder().build().readTree(JsonMapper.builder().build().writeValueAsString(report));
 
             assertThat(json.get("schemaVersion").asString()).isEqualTo("0.1");
-            assertThat(json.get("files").get(0).has("isTest")).isTrue();
-            assertThat(json.get("files").get(0).get("isTest").asBoolean()).isTrue();
+            JsonNode makefile = json.get("files").get(0);
+            JsonNode test = json.get("files").get(1);
+            assertThat(makefile.get("path").asString()).isEqualTo("Makefile");
+            assertThat(makefile.has("language")).as("present even when unknown").isTrue();
+            assertThat(makefile.get("language").isNull()).isTrue();
+            assertThat(makefile.has("symbols")).as("optional sections omitted").isFalse();
+            assertThat(test.get("isTest").asBoolean()).isTrue();
+            assertThat(test.get("symbols").get(0).has("parent")).as("null parent written, per schema").isTrue();
             assertThat(json.get("repo").get("analyzedAt").isString()).as("ISO-8601 string, not a number").isTrue();
         }
     }
