@@ -60,7 +60,7 @@ reading order, and show the graph and ranked list in the UI. Ugly is fine. End t
 Ownership from blame, bus-factor flags, change coupling (file and component level, with counts and
 confidence), hotspots. Basic author alias merging.
 
-### M3: Findings and full report UI (weeks 6-7, ~30-40 h)
+### M3: Findings and full report UI (weeks 6-7, ~30-40 h) -- DONE 2026-09-20
 Duplicate modules, unreferenced files, missing tests, committed generated files, repeated logic.
 Overview page, ownership views, JSON export, background job runner with progress.
 
@@ -96,6 +96,28 @@ README, architecture diagram, short demo video.
   Without a cap the JVM grows to about 510 MiB simply because memory is available; that number is not a need.
 - On Render set `CODEATLAS_THREADS=1` (one CPU) and keep the blame cap; very large repos still need a
   repository size limit before cloning (M7).
+
+## Findings checked against the early prototype (M3)
+The throwaway prototype (regex parsing, before this repo) reported issues in two repos. The real
+implementation, run independently, finds:
+
+| Repo | Prototype finding | CodeAtlas |
+|---|---|---|
+| shrishaanth/Syntropy | duplicate `src/hrp.py` / `src/core/hrp.py` | Found as *two versions* of one module: they share only 4% of lines, so the prototype's "duplicate" (by name) was imprecise |
+| shrishaanth/Syntropy | stray `unit_test1.py` | Found (no static import) |
+| shrishaanth/Syntropy | unused `src/domain.py` | Found ("only tests import it") |
+| hemanthvnp/CineScope | five separate TMDB clients | Found by file-name stem across 4 areas (JS and Python) |
+| hemanthvnp/CineScope | tests under only one service | Found (3 areas without tests) |
+| hemanthvnp/CineScope | committed cache file | Found (hash-named cache entry) |
+| hemanthvnp/CineScope | committed `status.txt` dump | **Missed**: no generic rule without false positives |
+
+False-positive check on well-kept repos after tuning: Flask 4 findings (all verified by reading the
+code), psf/requests 0. Two rules were tightened because of Flask (layered same-named modules, `.env`
+test fixtures) and one because of requests (docs areas without tests). This is still a small sample;
+M4 should include findings in the evaluation.
+
+Known gaps: repeated-logic by function body is Python-only; JS/TS duplication is only caught by file
+names. Flask's core directories form one import cycle, so its architecture view has little layering.
 
 ## Cut order if time runs short
 1. M6 integration, 2. M5 Q&A, 3. some M3 findings. Never cut M4.

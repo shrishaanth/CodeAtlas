@@ -5,8 +5,8 @@ start reading, who owns what, which files change together, hotspots and concrete
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
 number can be traced back to a file, line or commit. An LLM is optional and only used for Q&A.
 
-> **Status:** early development. Milestones M1-M2 of [PLAN.md](PLAN.md) are done: import graph, reading
-> order, ownership, change coupling and hotspots. Findings come in M3. Nothing is evaluated against an
+> **Status:** early development. Milestones M1-M3 of [PLAN.md](PLAN.md) are done: import graph, reading
+> order, ownership, change coupling, hotspots, layers and findings. Nothing is evaluated against an
 > independent source yet (M4); reading order has a known weakness described in PLAN.md.
 
 ## What it produces today
@@ -21,6 +21,11 @@ number can be traced back to a file, line or commit. An LLM is optional and only
 - **Change coupling:** files and top-level areas that change in the same commits, marking pairs with no
   import between them (hidden dependencies).
 - **Hotspots:** code that is both frequently changed and deeply nested (indentation complexity).
+- **Architecture:** directories stacked in layers by import direction, with import cycles marked.
+- **Findings,** each with file and line evidence linked to GitHub: near-duplicate files and same-named
+  module versions, identical function bodies, the same client rewritten in several services (by file
+  name), import cycles between directories, committed build output, caches and `.env` files (never read),
+  areas without tests, and modules no code imports ("no static import found", not "dead code").
 - **File details:** owners, files it usually changes with, imports, importers, definitions with GitHub links.
 - **JSON export** of the whole report. Format: [docs/report-schema.md](docs/report-schema.md).
 
