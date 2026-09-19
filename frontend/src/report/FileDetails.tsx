@@ -1,6 +1,7 @@
 import type { Report } from './types'
 import { sourceUrl } from './types'
 import { ImportEdge } from './CouplingView'
+import { KIND_LABELS } from './findingKinds'
 import { Flags } from './OwnershipView'
 import type { ReportIndex } from './reportIndex'
 import { authorName, formatDate, formatPercent } from './reportIndex'
@@ -32,6 +33,7 @@ export function FileDetails({ report, index, path, onSelect }: Props) {
   const url = sourceUrl(report.repo, path)
   const ownership = index.fileOwnership.get(path)
   const coupled = index.coupled.get(path) ?? []
+  const fileFindings = index.findings.get(path) ?? []
 
   return (
     <div className="details">
@@ -61,14 +63,27 @@ export function FileDetails({ report, index, path, onSelect }: Props) {
             </dd>
           </>
         )}
-        {file.isTest && (
+        {(file.isTest || file.isGenerated) && (
           <>
             <dt>Kind</dt>
-            <dd>Test file</dd>
+            <dd>{[file.isTest && 'Test file', file.isGenerated && 'Generated'].filter(Boolean).join(', ')}</dd>
           </>
         )}
       </dl>
 
+      {fileFindings.length > 0 && (
+        <section>
+          <h4>Findings ({fileFindings.length})</h4>
+          <ul className="plain">
+            {fileFindings.map((f) => (
+              <li key={f.id}>
+                <span className={f.severity === 'warn' ? 'pill pill-warn' : 'pill'}>{KIND_LABELS[f.kind]}</span>{' '}
+                <span className="small">{f.title}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       {ownership && (
         <section>
           <h4>

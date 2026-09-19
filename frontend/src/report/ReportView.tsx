@@ -1,6 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
+import { ArchitectureView } from './ArchitectureView'
 import { CouplingView } from './CouplingView'
 import { FileDetails } from './FileDetails'
+import { FindingsView } from './FindingsView'
 import { HotspotsView } from './HotspotsView'
 import { OverviewPanel } from './OverviewPanel'
 import { OwnershipView } from './OwnershipView'
@@ -14,6 +16,8 @@ const ImportGraphView = lazy(() => import('./ImportGraphView').then((m) => ({ de
 
 const TABS = [
   { id: 'reading', label: 'Reading order' },
+  { id: 'findings', label: 'Findings' },
+  { id: 'architecture', label: 'Architecture' },
   { id: 'graph', label: 'Graph' },
   { id: 'ownership', label: 'Ownership' },
   { id: 'coupling', label: 'Change coupling' },
@@ -76,6 +80,8 @@ export function ReportView({ report }: { report: Report }) {
           {tab === 'reading' && (
             <ReadingOrderList items={report.readingOrder} selected={selected} onSelect={setSelected} />
           )}
+          {tab === 'findings' && <FindingsView report={report} onSelect={setSelected} />}
+          {tab === 'architecture' && <ArchitectureView report={report} onSelect={setSelected} />}
           {tab === 'graph' && (
             <Suspense fallback={<p className="muted">Loading graph…</p>}>
               <ImportGraphView report={report} index={index} selected={selected} onSelect={setSelected} />

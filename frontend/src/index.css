@@ -735,3 +735,55 @@ select {
 .tabs button {
   white-space: nowrap;
 }
+
+/* ---- Findings and architecture ------------------------------------------------------------ */
+
+ul.findings {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.finding p {
+  margin: 6px 0;
+}
+
+.finding-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.evidence li {
+  word-break: break-all;
+}
+
+.layer h3 {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.layer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.layer-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 180px;
+  max-width: 100%;
+}
+
+.layer-box.in-cycle {
+  border-color: var(--warn);
+}
+
+.layer-box .pill {
+  margin-left: 6px;
+}

@@ -22,6 +22,13 @@ export function OverviewPanel({ report }: { report: Report }) {
           note="Python"
         />
         <Stat label="History" value={`${formatDate(o.firstCommitAt)} – ${formatDate(o.lastCommitAt)}`} small />
+        {report.findings && (
+          <Stat
+            label="Findings"
+            value={String(report.findings.length)}
+            note={`${report.findings.filter((f) => f.severity === 'warn').length} warn`}
+          />
+        )}
       </div>
 
       {totalLines > 0 && (

@@ -13,6 +13,7 @@ export interface Report {
   people?: People
   coupling?: Coupling
   hotspots?: Hotspot[]
+  findings?: Finding[]
 }
 
 export interface RepoInfo {
@@ -28,6 +29,7 @@ export interface Limits {
   maxCommits: number
   historyTruncated: boolean
   ignoredRevisions?: string[]
+  findingsOmitted?: Record<string, number>
   skippedFiles: { path: string; reason: string }[]
   parseErrors: { path: string; startLine: number }[]
 }
@@ -49,6 +51,7 @@ export interface FileEntry {
   lines: number
   componentId: string
   isTest: boolean
+  isGenerated?: boolean
   symbols?: Symbol[]
   imports?: Import[]
   git?: { commits: number; authorCount: number; firstChangedAt: string; lastChangedAt: string }
@@ -75,6 +78,32 @@ export interface Component {
   path: string
   files: number
   lines: number
+  /** 0 = imports no other directory; null without Python files */
+  layer?: number | null
+}
+
+export type FindingKind =
+  | 'duplicate-module'
+  | 'repeated-logic'
+  | 'import-cycle'
+  | 'generated-file-committed'
+  | 'missing-tests'
+  | 'unreferenced-file'
+
+export interface Finding {
+  id: string
+  kind: FindingKind
+  severity: 'warn' | 'info'
+  title: string
+  detail: string
+  evidence: Evidence[]
+}
+
+export interface Evidence {
+  path?: string
+  startLine?: number
+  endLine?: number
+  note?: string
 }
 
 export interface Edge {
@@ -162,8 +191,9 @@ export function isCodeLanguage(language: string | null | undefined): boolean {
   return !!language && !NON_CODE.has(language)
 }
 
-/** Link to a file (and optionally a line) on GitHub at the analyzed commit, or null for local repos. */
-export function sourceUrl(repo: RepoInfo, path: string, line?: number): string | null {
+/** Link to a file (optionally a line or line range) on GitHub at the analyzed commit, or null for local repos. */
+export function sourceUrl(repo: RepoInfo, path: string, line?: number, endLine?: number): string | null {
   if (!repo.source.startsWith('https://github.com/')) return null
-  return `${repo.source}/blob/${repo.commit}/${path}${line ? `#L${line}` : ''}`
+  const anchor = line ? (endLine && endLine !== line ? `#L${line}-L${endLine}` : `#L${line}`) : ''
+  return `${repo.source}/blob/${repo.commit}/${path}${anchor}`
 }

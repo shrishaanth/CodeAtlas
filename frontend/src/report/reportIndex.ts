@@ -1,4 +1,4 @@
-import type { Author, FileEntry, FilePair, Ownership, ReadingItem, Report } from './types'
+import type { Author, FileEntry, FilePair, Finding, Ownership, ReadingItem, Report } from './types'
 
 /** Lookups the views need repeatedly, built once per report. */
 export interface ReportIndex {
@@ -9,6 +9,8 @@ export interface ReportIndex {
   fileOwnership: Map<string, Ownership>
   /** For each file, the coupled pairs it takes part in, strongest first. */
   coupled: Map<string, FilePair[]>
+  /** Findings whose evidence mentions the file. */
+  findings: Map<string, Finding[]>
 }
 
 export function indexReport(report: Report): ReportIndex {
@@ -32,7 +34,15 @@ export function indexReport(report: Report): ReportIndex {
       else coupled.set(path, [p])
     }
   }
-  return { files, importers, reading, authors, fileOwnership, coupled }
+  const findings = new Map<string, Finding[]>()
+  for (const f of report.findings ?? []) {
+    for (const path of new Set(f.evidence.map((e) => e.path).filter((p): p is string => !!p))) {
+      const list = findings.get(path)
+      if (list) list.push(f)
+      else findings.set(path, [f])
+    }
+  }
+  return { files, importers, reading, authors, fileOwnership, coupled, findings }
 }
 
 export function authorName(index: ReportIndex, id: string): string {
