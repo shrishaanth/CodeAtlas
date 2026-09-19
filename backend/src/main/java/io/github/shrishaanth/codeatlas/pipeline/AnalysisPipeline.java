@@ -156,7 +156,7 @@ public class AnalysisPipeline {
                         repo.branch(), clock.instant(), toolVersion),
                 limits(files, parsed, history, blame, overCap),
                 overview(files, python, history, people),
-                fileEntries(files, parsed, resolved, history),
+                fileEntries(files, parsed, resolved, history, people),
                 components(files),
                 edges(graph, coupling),
                 readingOrder,
@@ -226,7 +226,9 @@ public class AnalysisPipeline {
 
     private static List<Report.FileEntry> fileEntries(List<SourceFile> files, Map<String, ParsedPythonFile> parsed,
                                                       Map<String, List<ResolvedImport>> resolved,
-                                                      GitHistory history) {
+                                                      GitHistory history, People people) {
+        java.util.Set<String> botIds = new java.util.HashSet<>();
+        people.people().stream().filter(People.Person::bot).forEach(p -> botIds.add(p.id()));
         List<Report.FileEntry> out = new ArrayList<>(files.size());
         for (SourceFile f : files) {
             ParsedPythonFile pf = parsed.get(f.path());
@@ -237,8 +239,11 @@ public class AnalysisPipeline {
                     .map(r -> new Report.Import(r.imp().text(), r.imp().line(), r.module(), r.targetPath(), r.external()))
                     .toList();
             GitHistory.FileHistory h = history.files().get(f.path());
-            Report.FileGit git = h == null ? null
-                    : new Report.FileGit(h.commits(), h.authorEmails().size(), h.firstChangedAt(), h.lastChangedAt());
+            // Distinct people after identity merging, bots excluded, consistent with overview.contributors.
+            Report.FileGit git = h == null ? null : new Report.FileGit(h.commits(),
+                    (int) h.authorEmails().stream().map(e -> people.idForEmail(e).orElse(e))
+                            .filter(id -> !botIds.contains(id)).distinct().count(),
+                    h.firstChangedAt(), h.lastChangedAt());
             out.add(new Report.FileEntry(f.path(), f.language(), f.lines(), componentOf(f.path()), f.test(),
                     symbols, imports, git));
         }

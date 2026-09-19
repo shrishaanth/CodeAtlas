@@ -96,7 +96,7 @@ Absent sections are omitted from the JSON rather than written as null.
   ],
   "git": {
     "commits": 812,                 // non-merge commits, following renames
-    "authorCount": 190,
+    "authorCount": 190,             // distinct people (after identity merging), bots excluded
     "firstChangedAt": "...", "lastChangedAt": "..."
   }
 }
