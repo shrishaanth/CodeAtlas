@@ -16,6 +16,12 @@ codeatlas:
   cors:
     # Comma-separated list, e.g. https://codeatlas.vercel.app
     allowed-origins: ${CODEATLAS_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  analysis:
+    # Accept filesystem paths as repositories. Never enable on a public server.
+    allow-local-paths: ${CODEATLAS_ALLOW_LOCAL_PATHS:false}
+    max-commits: ${CODEATLAS_MAX_COMMITS:20000}
+    clone-timeout-seconds: ${CODEATLAS_CLONE_TIMEOUT_SECONDS:120}
+    max-queued: ${CODEATLAS_MAX_QUEUED:20}
 
 management:
   endpoints:

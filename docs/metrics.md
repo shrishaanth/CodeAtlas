@@ -53,8 +53,9 @@ The goal: a newcomer should read the files that the rest of the code depends on 
 actively worked on. v1 ranks files by importance. It does not yet order them by dependency
 (read foundations before the files that use them); that is an M4 experiment.
 
-**Candidates:** Python files that are not tests and have at least 5 non-blank lines
-(this drops empty `__init__.py` files, which would otherwise rank high on imports alone).
+**Candidates:** Python files that are not tests and have at least 5 non-blank lines (*initial* threshold;
+it drops empty `__init__.py` files, which would otherwise rank high on imports alone, but also tiny
+real modules, so M4 should check what it costs).
 
 For each candidate file `f`, over the graph of resolved import edges between non-test files:
 
