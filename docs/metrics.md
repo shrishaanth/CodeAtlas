@@ -11,6 +11,16 @@ Weights marked *initial* are guesses to be calibrated in M4 against baselines, n
 - A file is a **test** if any directory in its path is `test` or `tests`, or its name matches
   `test_*.py`, `*_test.py` or `conftest.py`.
 
+## Overview numbers
+- `files`: every tracked file, including binaries and docs.
+- `linesOfCode`: total lines (blank lines included) in text files whose language is known and is not
+  documentation or data (Markdown, reStructuredText, JSON, YAML, TOML, XML, notebooks are excluded).
+- `languages`: files and lines per detected language, largest first.
+- `testFileRatio`: Python test files divided by Python non-test files. It can exceed 1 (Flask: 48 test
+  files, 35 source files). It is null when there are no non-test Python files.
+- `contributors`: distinct author emails (before alias merging, which arrives in M2).
+- `components`: in v1, simply directories; `.` is the repository root.
+
 ## Python import resolution
 An import becomes an edge only if it resolves to a file in the repository. Everything else is `external`.
 
