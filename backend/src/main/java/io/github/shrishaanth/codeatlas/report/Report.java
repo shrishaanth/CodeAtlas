@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * The analysis result: the one contract between the engine and everything that displays it.
  * Field-by-field documentation lives in docs/report-schema.md; keep the two in sync.
- * Sections that later milestones add (coupling, hotspots, findings, ownership) are null until then.
+ * Sections that later milestones add (findings) are null until then and omitted from the JSON.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record Report(

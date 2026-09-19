@@ -7,8 +7,8 @@ The static demo is literally a set of these files, so the UI must never need any
 Status: **draft**. Fields are expected to change during M1-M3. `schemaVersion` changes when they do.
 Example values below are illustrative only, not real measurements.
 
-**Produced today (M1):** `repo`, `limits`, `overview`, `files`, `components`, `edges` (import only),
-`readingOrder`, `people.authors`. Sections and fields marked *(M2)* or *(M3)* are planned, not yet written.
+**Produced today (M2):** `repo`, `limits`, `overview`, `files`, `components`, `edges`, `readingOrder`,
+`people`, `coupling`, `hotspots`. Sections and fields marked *(M3)* are planned, not yet written.
 Absent sections are omitted from the JSON rather than written as null.
 
 ## Conventions
@@ -32,9 +32,9 @@ Absent sections are omitted from the JSON rather than written as null.
   "components":  [ ... ],   // groups of files (top-level packages / directories)
   "edges":       [ ... ],   // import and co-change edges between files
   "readingOrder":[ ... ],
-  "people":      { ... },   // authors; ownership (M2)
-  "coupling":    { ... },   // (M2)
-  "hotspots":    [ ... ],   // (M2)
+  "people":      { ... },   // people and ownership
+  "coupling":    { ... },
+  "hotspots":    [ ... ],
   "findings":    [ ... ]    // (M3)
 }
 ```
@@ -56,8 +56,9 @@ Absent sections are omitted from the JSON rather than written as null.
 {
   "maxCommits": 20000,
   "historyTruncated": false,
-  "ignoredRevisions": ["9f1e..."],          // (M2) e.g. from .git-blame-ignore-revs
-  "skippedFiles": [ { "path": "vendor/x.py", "reason": "vendored" } ],
+  "ignoredRevisions": ["9f1e..."],          // from .git-blame-ignore-revs, skipped by blame
+  "skippedFiles": [ { "path": "big.py", "reason": "larger than 1 MB" },
+                    { "path": "old/x.js", "reason": "blame cap" } ],
   "parseErrors":  [ { "path": "tests/bad.py", "startLine": 3 } ]
 }
 ```
@@ -66,7 +67,7 @@ Absent sections are omitted from the JSON rather than written as null.
 ```jsonc
 {
   "commits": 5557,
-  "contributors": 640,             // distinct author emails (alias merging arrives in M2)
+  "contributors": 640,             // people after identity merging, bots excluded
   "firstCommitAt": "2010-04-06T...",
   "lastCommitAt": "2026-09-10T...",
   "files": 312,
@@ -114,10 +115,10 @@ components that import nothing internal sit at layer 0.
 ## `edges[]`
 ```jsonc
 { "source": "src/flask/app.py", "target": "src/flask/globals.py", "kind": "import", "weight": 1 }
-{ "source": "src/flask/app.py", "target": "tests/test_basic.py",  "kind": "cochange", "weight": 143 }  // (M2)
+{ "source": "src/flask/app.py", "target": "tests/test_basic.py",  "kind": "cochange", "weight": 143 }
 ```
 For `import`, source imports target. For `cochange`, the pair is unordered and `weight` is the
-number of commits that changed both.
+number of commits that changed both; there is one `cochange` edge per pair in `coupling.files`.
 
 ## `readingOrder[]`
 ```jsonc
@@ -135,39 +136,46 @@ The scoring formula and weights are documented in `docs/metrics.md`. Each part i
 ```jsonc
 {
   "authors": [
-    { "id": "a1", "name": "Jane Doe", "emails": ["jane@example.org"], "commits": 1200 }
+    { "id": "a1", "name": "Jane Doe", "emails": ["jane@example.org", "jane@home.org"],
+      "commits": 1200, "isBot": false, "lastCommitAt": "2026-09-01T10:00:00Z" }
   ],
-  // (M2) from here on
   "fileOwnership": [
     { "path": "src/flask/app.py", "totalLines": 1536,
-      "owners": [ { "authorId": "a1", "lines": 900, "share": 0.586 } ],
-      "busFactor": 1 }
+      "owners": [ { "authorId": "a1", "lines": 900, "share": 0.586 } ],   // at most 5, most first
+      "otherLines": 120, "ownerCount": 23,
+      "busFactor": 1, "topOwnerActive": true, "flags": [] }             // "single-owner", "orphaned"
   ],
-  "directoryOwnership": [ { "path": "src/flask", "totalLines": 9800, "owners": [ ... ], "busFactor": 2 } ]
+  "directoryOwnership": [ { "path": "src/flask", ... same fields ... } ]  // "." is the whole repo
 }
 ```
-`busFactor` is the smallest number of authors who together own at least half of the lines.
-Blame ignores whitespace-only changes (see `spikes/README.md` for why).
+Authors are people after identity merging; `emails` lists every identity merged into one person.
+`totalLines` counts human-authored lines only (bots are excluded from ownership).
+`busFactor` is the smallest number of people who together own at least half of the lines.
+Blame ignores whitespace-only changes (see `spikes/README.md` for why). Full definitions: `docs/metrics.md`.
 
 ## `coupling`
 ```jsonc
 {
   "files": [
-    { "a": "src/flask/app.py", "b": "src/flask/scaffold.py",
-      "together": 57, "aCommits": 812, "bCommits": 140, "confidence": 0.41, "hasImportEdge": true }
+    { "a": "src/flask/app.py", "b": "src/flask/scaffold.py",   // a < b alphabetically
+      "together": 57, "aCommits": 812, "bCommits": 140, "degree": 0.41, "hasImportEdge": true }
   ],
-  "components": [ { "a": "src/flask", "b": "tests", "together": 900, "confidence": 0.6 } ]
+  "components": [ { "a": "src/flask", "b": "tests", "together": 900, "aCommits": 1400, "bCommits": 950,
+                    "degree": 0.76 } ],
+  "skippedLargeCommits": 16
 }
 ```
-Commits that touch very many files (bulk reformatting, mass renames) are excluded from coupling.
-The threshold and the `confidence` formula are documented in `docs/metrics.md` (M2).
-`hasImportEdge: false` pairs are the interesting ones: they change together without importing each other.
+Commits that touch more than 30 files (bulk reformatting, mass renames) are excluded, and counted in
+`skippedLargeCommits`. `degree = together / average(aCommits, bCommits)`; thresholds in `docs/metrics.md`.
+`hasImportEdge` is `true`, `false`, or `null` when unknown (either file is not a parsed Python file).
+`false` pairs are hidden dependencies: they change together without importing each other.
 
 ## `hotspots[]`
 ```jsonc
-{ "rank": 1, "path": "src/flask/app.py", "score": 0.93,
-  "parts": { "commits": 812, "linesChanged": 16400, "lines": 1536 } }
+{ "rank": 1, "path": "src/flask/app.py", "score": 0.93, "commits": 812, "lines": 1536, "complexity": 3222 }
 ```
+`complexity` is indentation complexity; `score` multiplies normalized commits and complexity
+(`docs/metrics.md`, "Hotspots"). At most 50, non-test code files only.
 
 ## `findings[]`
 ```jsonc
