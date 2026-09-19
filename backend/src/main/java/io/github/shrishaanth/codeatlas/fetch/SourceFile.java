@@ -15,9 +15,15 @@ import org.eclipse.jgit.lib.ObjectId;
  * @param indentComplexity sum of indentation depth over non-blank lines (see docs/metrics.md, "Hotspots")
  * @param test          whether the file is test code (see docs/metrics.md)
  * @param skipReason    why the content is not parsed, or null if it can be
+ * @param generatedReason why the file looks generated (build output, cache, marker), or null
  */
 public record SourceFile(String path, ObjectId blobId, String language, long sizeBytes, boolean binary,
-                         int lines, int nonBlankLines, int indentComplexity, boolean test, String skipReason) {
+                         int lines, int nonBlankLines, int indentComplexity, boolean test, String skipReason,
+                         String generatedReason) {
+
+    public boolean generated() {
+        return generatedReason != null;
+    }
 
     public boolean isPython() {
         return "python".equals(language);

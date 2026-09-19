@@ -39,21 +39,38 @@ public class FileInventory {
         long size = loader.getSize();
         String language = FileClassifier.language(path);
         boolean test = FileClassifier.isTest(path);
+        String generated = FileClassifier.generatedReason(path);
 
         if (size > MAX_PARSE_BYTES) {
             // Too big to parse; still count it, but don't load it all into memory.
-            return new SourceFile(path, blobId, language, size, false, 0, 0, 0, test, "larger than 1 MB");
+            return new SourceFile(path, blobId, language, size, false, 0, 0, 0, test, "larger than 1 MB", generated);
         }
         byte[] bytes = loader.getBytes();
         if (looksBinary(bytes)) {
-            return new SourceFile(path, blobId, language, size, true, 0, 0, 0, test, null);
+            return new SourceFile(path, blobId, language, size, true, 0, 0, 0, test, null, generated);
         }
         int[] counts = countLines(bytes);
-        return new SourceFile(path, blobId, language, size, false, counts[0], counts[1], counts[2], test, null);
+        return new SourceFile(path, blobId, language, size, false, counts[0], counts[1], counts[2], test, null,
+                generated != null ? generated : generatedMarker(bytes));
     }
 
     public static String readText(Repository repo, ObjectId blobId) throws IOException {
         return new String(repo.open(blobId).getBytes(), StandardCharsets.UTF_8);
+    }
+
+    private static final String[] GENERATED_MARKERS = {"@generated", "DO NOT EDIT", "Code generated"};
+
+    /** "marked as generated" if one of the first 5 lines carries a common generator marker. */
+    static String generatedMarker(byte[] bytes) {
+        int end = 0, lines = 0;
+        while (end < bytes.length && lines < 5) {
+            if (bytes[end++] == '\n') lines++;
+        }
+        String head = new String(bytes, 0, end, StandardCharsets.UTF_8);
+        for (String marker : GENERATED_MARKERS) {
+            if (head.contains(marker)) return "marked as generated";
+        }
+        return null;
     }
 
     static boolean looksBinary(byte[] bytes) {

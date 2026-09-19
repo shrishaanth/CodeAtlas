@@ -21,7 +21,7 @@ public final class Hotspots {
     /** @param commits commits per current path (missing means 0) */
     public static List<Report.Hotspot> rank(List<SourceFile> files, Map<String, Integer> commits) {
         List<SourceFile> candidates = files.stream()
-                .filter(f -> f.isCode() && !f.test() && !f.binary() && f.skipReason() == null)
+                .filter(f -> f.isCode() && !f.test() && !f.binary() && !f.generated() && f.skipReason() == null)
                 .filter(f -> commits.getOrDefault(f.path(), 0) > 0)
                 .toList();
         int maxCommits = candidates.stream().mapToInt(f -> commits.get(f.path())).max().orElse(0);

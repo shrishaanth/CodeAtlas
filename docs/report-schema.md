@@ -85,7 +85,7 @@ Absent sections are omitted from the JSON rather than written as null.
   "lines": 1536,
   "componentId": "src/flask",
   "isTest": false,
-  "isGenerated": false,            // (M3)
+  "isGenerated": false,            // build output, cache or generator marker (docs/metrics.md)
   "symbols": [
     { "kind": "class", "name": "Flask", "startLine": 76, "endLine": 1530, "parent": null },
     { "kind": "function", "name": "run", "startLine": 540, "endLine": 660, "parent": "Flask" }

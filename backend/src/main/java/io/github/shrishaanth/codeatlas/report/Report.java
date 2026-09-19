@@ -52,6 +52,7 @@ public record Report(
     /** {@code language} is always written (null if unknown); the optional sections are omitted when absent. */
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public record FileEntry(String path, String language, int lines, String componentId, boolean isTest,
+                            boolean isGenerated,
                             @JsonInclude(JsonInclude.Include.NON_NULL) List<Symbol> symbols,
                             @JsonInclude(JsonInclude.Include.NON_NULL) List<Import> imports,
                             @JsonInclude(JsonInclude.Include.NON_NULL) FileGit git) {

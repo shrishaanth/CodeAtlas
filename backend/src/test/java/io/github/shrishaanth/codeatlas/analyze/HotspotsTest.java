@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.within;
 class HotspotsTest {
 
     private static SourceFile file(String path, String language, int lines, int complexity, boolean test) {
-        return new SourceFile(path, null, language, lines * 10L, false, lines, lines, complexity, test, null);
+        return new SourceFile(path, null, language, lines * 10L, false, lines, lines, complexity, test, null, null);
     }
 
     @Test

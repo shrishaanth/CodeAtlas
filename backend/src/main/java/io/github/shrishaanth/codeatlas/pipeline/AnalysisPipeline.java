@@ -119,7 +119,7 @@ public class AnalysisPipeline {
 
         // 5. Blame and people ----------------------------------------------------------
         List<SourceFile> blameCandidates = files.stream()
-                .filter(f -> f.isCode() && f.parseable())
+                .filter(f -> f.isCode() && f.parseable() && !f.generated())
                 .sorted(Comparator.comparingInt((SourceFile f) -> commitsOf(history, f.path())).reversed()
                         .thenComparing(SourceFile::path))
                 .toList();
@@ -244,7 +244,7 @@ public class AnalysisPipeline {
                     (int) h.authorEmails().stream().map(e -> people.idForEmail(e).orElse(e))
                             .filter(id -> !botIds.contains(id)).distinct().count(),
                     h.firstChangedAt(), h.lastChangedAt());
-            out.add(new Report.FileEntry(f.path(), f.language(), f.lines(), componentOf(f.path()), f.test(),
+            out.add(new Report.FileEntry(f.path(), f.language(), f.lines(), componentOf(f.path()), f.test(), f.generated(),
                     symbols, imports, git));
         }
         return out;
