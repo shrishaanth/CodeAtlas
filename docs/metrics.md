@@ -8,8 +8,14 @@ Weights marked *initial* are guesses to be calibrated in M4 against baselines, n
 - A file is **binary** if its first 8 KB contain a NUL byte. Binary files are counted but not read.
 - A file larger than 1 MB is counted but not parsed, and it is listed in `limits.skippedFiles`.
 - **Language** comes from the file extension.
-- A file is a **test** if any directory in its path is `test` or `tests`, or its name matches
-  `test_*.py`, `*_test.py` or `conftest.py`.
+- A file is a **test** if any directory in its path is `test`, `tests` or `__tests__`, or its name
+  matches a common convention: `test_*.py`, `*_test.py`, `conftest.py`, `*.test.*` and `*.spec.*`
+  (JavaScript/TypeScript), `*_test.go`, or `*Test.java` / `*Tests.java`.
+- A file is **generated** if its path matches build output or caches (`__pycache__/`, `*.pyc`,
+  `node_modules/`, `dist/`, `build/`, `*.egg-info/`, `.pytest_cache/`, `htmlcov/`, `.coverage`,
+  `*.min.js`, `*.min.css`, `*.map`, `.DS_Store`, `.ipynb_checkpoints/`), or if one of its first 5
+  lines contains `@generated`, `DO NOT EDIT` or `Code generated`. Generated files are excluded from
+  duplicate detection, hotspots and ownership.
 
 ## Overview numbers
 - `files`: every tracked file, including binaries and docs.
@@ -145,3 +151,53 @@ Code that is both complicated and frequently changed, where bugs and slow review
 - `score = log(1+commits)/log(1+max commits) * log(1+complexity)/log(1+max complexity)`.
   Multiplying means a file must be both busy and complicated to rank high.
 - The top 50 are reported with their raw commits, lines and complexity.
+
+
+## Layers and import cycles
+Computed on directories (the v1 components) using resolved imports between non-test Python files.
+- Directory A **depends on** directory B if some file in A imports a file in B.
+- Directories that depend on each other, directly or through others, form an **import cycle**
+  (a strongly connected component). Each cycle becomes one finding.
+- **Layer** of a directory: 0 if it depends on no other directory; otherwise one more than the highest
+  layer it depends on, with each cycle treated as a single unit. Low layers are foundations, high
+  layers are the code built on them. Directories without Python files have no layer.
+
+## Findings
+Concrete, checkable observations. Each lists its evidence (files and line ranges) so it can be
+verified by opening the files. A finding is a prompt to look, not a verdict.
+
+**Near-duplicate files** (`duplicate-module`, warn)
+- Compares non-test, non-generated code files with at least 10 significant lines. A significant line
+  is a line with surrounding whitespace removed that is at least 8 characters long and is not a comment
+  (`#`, `//`). Lines that appear in more than 20 files (boilerplate) are ignored.
+- `containment = shared significant lines / significant lines of the smaller file`. Reported when
+  containment is at least **0.8** and at least **10** lines are shared (*initial* thresholds).
+
+**Repeated functions** (`repeated-logic`, info)
+- Python function bodies of at least **6** significant lines, compared after removing whitespace and
+  comments. Identical bodies in two or more files are reported together, one finding per group.
+  Methods are included; tests are excluded.
+
+**No static import found** (`unreferenced-file`, info)
+- Non-test Python files that no file in the repository imports, excluding likely entry points:
+  `__init__.py`, `__main__.py`, `setup.py`, `conftest.py`, `manage.py`, `wsgi.py`, `asgi.py`,
+  `docs/conf.py`, files with an `if __name__ == "__main__":` block, files under `scripts/`, `bin/`,
+  `examples/`, `docs/`, `migrations/`, and modules named in `pyproject.toml`, `setup.cfg` or `setup.py`.
+- Frameworks and plugins often load modules by name at runtime, which static analysis cannot see.
+  The finding therefore says "no static import found", not "dead code".
+
+**Area without tests** (`missing-tests`, info)
+- A top-level area (as in change coupling) with at least **300** lines of non-test code, no test files
+  inside it, and (for Python) no test file anywhere importing one of its files.
+
+**Generated or local files committed** (`generated-file-committed`, warn for build output, caches and
+`.env` files; info for files marked as generated, which are often committed on purpose)
+- Files matching the generated rules above, plus environment files (`.env`, `.env.*` except
+  `.env.example`/`.env.sample`/`.env.template`) and database files (`*.sqlite`, `*.sqlite3`, `*.db`).
+  Contents of `.env` files are never read or shown.
+
+**Import cycle between directories** (`import-cycle`, warn)
+- Each import cycle from "Layers and import cycles" with its directories and one example import
+  per dependency, so the cycle can be followed in the code.
+
+Findings are capped at 50 per kind, most significant first; the report says how many were left out.
