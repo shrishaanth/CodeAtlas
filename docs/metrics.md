@@ -17,13 +17,23 @@ An import becomes an edge only if it resolves to a file in the repository. Every
 1. **Source roots.** The repo root, plus every directory that contains a package (a directory with
    `__init__.py`) but is not itself a package. This covers both `src/` layouts and repos with
    several services in subdirectories.
-2. **Module names.** Each `.py` file gets a dotted name relative to each source root that contains it
-   (`src/flask/json/tag.py` -> `flask.json.tag`; `pkg/__init__.py` -> `pkg`).
+   **Script directory:** if the importing file is not inside a package, its own directory is also a
+   root. Python puts a script's directory on the path, and small repos rely on this
+   (`backend/main.py` doing `import tmdb` for `backend/tmdb.py`). Files inside packages do not get
+   this rule, because Python 3 has no implicit relative imports.
+2. **Module lookup.** Module `a.b` under root `R` is `R/a/b/__init__.py` or `R/a/b.py` (`.pyi` stubs
+   are tried after `.py`). As in Python, a package beats a same-named module.
+   If several roots contain the module, the file sharing the most leading directories with the
+   importing file wins (in a monorepo, `services/a/app/main.py` importing `app.db` gets `services/a/app/db.py`).
 3. **`import a.b.c`** resolves to the most specific existing module among `a.b.c`, `a.b`, `a`.
 4. **`from a.b import c`** resolves to module `a.b.c` if it exists (a submodule), otherwise to `a.b`.
-5. **Relative imports** (`from ..x import y`) are resolved against the importing file's package first.
-6. **Fallback.** If nothing matched, a module name that matches the end of exactly one file's dotted
-   name is used (for namespace packages without `__init__.py`). If several files match, it stays unresolved.
+5. **Relative imports** (`from ..x import y`) are resolved by path from the importing file's directory,
+   one directory up per extra dot. Going above the repository root leaves the import unresolved.
+6. **Fallback.** If nothing matched, a module name with two or more parts that matches the end of
+   exactly one file's dotted path is used (for namespace packages without `__init__.py`).
+   Single names like `utils` are never matched this way: too ambiguous.
+7. **External** means the top-level name (`numpy` in `numpy.linalg`) is not found in the repo at all.
+   An import whose top-level package *is* in the repo but whose submodule is not is **unresolved**, not external.
 
 Known gaps: imports built at runtime (`importlib.import_module(name)`), `sys.path` manipulation,
 and conditional imports are all treated like normal imports if they are literal, and missed if not.
