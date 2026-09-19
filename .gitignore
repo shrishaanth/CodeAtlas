@@ -1,0 +1,19 @@
+# Build output
+target/
+cp.txt
+node_modules/
+dist/
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Local config and data
+.env
+.env.*
+!.env.example
+data/
