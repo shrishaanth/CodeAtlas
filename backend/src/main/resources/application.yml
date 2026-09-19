@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: codeatlas
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/codeatlas}
+    username: ${DATABASE_USER:codeatlas}
+    password: ${DATABASE_PASSWORD:codeatlas}
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
+codeatlas:
+  version: "@project.version@"
+  cors:
+    # Comma-separated list, e.g. https://codeatlas.vercel.app
+    allowed-origins: ${CODEATLAS_CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-components: always
