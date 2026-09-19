@@ -29,8 +29,9 @@ public record Report(
                            String toolVersion) {
     }
 
-    public record Limits(int maxCommits, boolean historyTruncated, List<SkippedFile> skippedFiles,
-                         List<ParseError> parseErrors) {
+    /** @param ignoredRevisions commits from .git-blame-ignore-revs that blame skipped */
+    public record Limits(int maxCommits, boolean historyTruncated, List<String> ignoredRevisions,
+                         List<SkippedFile> skippedFiles, List<ParseError> parseErrors) {
     }
 
     public record SkippedFile(String path, String reason) {
@@ -72,9 +73,26 @@ public record Report(
     public record ReadingItem(int rank, String path, double score, Map<String, Double> parts, List<String> reasons) {
     }
 
-    public record People(List<Author> authors) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record People(List<Author> authors, List<Ownership> fileOwnership, List<Ownership> directoryOwnership) {
     }
 
-    public record Author(String id, String name, List<String> emails, int commits) {
+    /** A person after identity merging; {@code emails} lists every identity merged in. */
+    public record Author(String id, String name, List<String> emails, int commits, boolean isBot,
+                         Instant lastCommitAt) {
+    }
+
+    /**
+     * @param totalLines   human-authored lines (bot lines excluded)
+     * @param owners       top owners, most lines first (at most 5)
+     * @param otherLines   lines owned by people not listed
+     * @param ownerCount   number of people owning at least one line
+     * @param flags        {@code single-owner}, {@code orphaned}
+     */
+    public record Ownership(String path, int totalLines, List<Owner> owners, int otherLines, int ownerCount,
+                            int busFactor, boolean topOwnerActive, List<String> flags) {
+    }
+
+    public record Owner(String authorId, int lines, double share) {
     }
 }

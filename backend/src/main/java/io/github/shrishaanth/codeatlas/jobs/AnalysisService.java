@@ -109,7 +109,9 @@ public class AnalysisService {
         repository.markRunning(id, clock.instant());
         long t0 = System.nanoTime();
         try (FetchedRepo repo = new RepoFetcher(config.workDir(), config.cloneTimeoutSeconds()).fetch(source)) {
-            Report report = new AnalysisPipeline(config.maxCommits(), toolVersion, clock)
+            Report report = new AnalysisPipeline(
+                    new AnalysisPipeline.Options(config.maxCommits(), config.maxBlameFiles(), config.threads()),
+                    toolVersion, clock)
                     .run(repo, throttled(id));
             repository.markDone(id, report.repo().name(), report.repo().commit(),
                     jsonMapper.writeValueAsString(report), clock.instant());

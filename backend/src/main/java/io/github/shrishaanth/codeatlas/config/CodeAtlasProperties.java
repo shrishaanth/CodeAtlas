@@ -15,7 +15,7 @@ public record CodeAtlasProperties(String version, Cors cors, Analysis analysis) 
     public CodeAtlasProperties {
         if (version == null || version.isBlank()) version = "dev";
         if (cors == null) cors = new Cors(List.of());
-        if (analysis == null) analysis = new Analysis(null, false, 0, 0, 0);
+        if (analysis == null) analysis = new Analysis(null, false, 0, 0, 0, 0, 0);
     }
 
     public record Cors(List<String> allowedOrigins) {
@@ -30,14 +30,18 @@ public record CodeAtlasProperties(String version, Cors cors, Analysis analysis) 
      * @param maxCommits        history walk cap per analysis
      * @param cloneTimeoutSeconds network timeout for cloning
      * @param maxQueued         analyses allowed to wait; further requests are refused
+     * @param maxBlameFiles     files blamed per analysis (most-committed first)
+     * @param threads           parallel blame workers; defaults to the number of CPUs
      */
     public record Analysis(Path workDir, boolean allowLocalPaths, int maxCommits, int cloneTimeoutSeconds,
-                           int maxQueued) {
+                           int maxQueued, int maxBlameFiles, int threads) {
         public Analysis {
             if (workDir == null) workDir = Path.of(System.getProperty("java.io.tmpdir"), "codeatlas");
             if (maxCommits <= 0) maxCommits = 20_000;
             if (cloneTimeoutSeconds <= 0) cloneTimeoutSeconds = 120;
             if (maxQueued <= 0) maxQueued = 20;
+            if (maxBlameFiles <= 0) maxBlameFiles = 3_000;
+            if (threads <= 0) threads = Runtime.getRuntime().availableProcessors();
         }
     }
 }

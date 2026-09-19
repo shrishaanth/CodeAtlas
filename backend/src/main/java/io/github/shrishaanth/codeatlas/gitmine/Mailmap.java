@@ -75,6 +75,15 @@ public final class Mailmap {
                 best.properEmail != null ? best.properEmail : e);
     }
 
+    /** The {@code .mailmap} committed at the given commit, or {@link #EMPTY}. */
+    public static Mailmap fromCommit(org.eclipse.jgit.lib.Repository repo, org.eclipse.jgit.revwalk.RevCommit commit)
+            throws java.io.IOException {
+        try (var tw = org.eclipse.jgit.treewalk.TreeWalk.forPath(repo, ".mailmap", commit.getTree())) {
+            if (tw == null) return EMPTY;
+            return parse(new String(repo.open(tw.getObjectId(0)).getBytes(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+    }
+
     public boolean isEmpty() {
         return entries.isEmpty();
     }

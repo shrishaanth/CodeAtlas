@@ -22,6 +22,9 @@ codeatlas:
     max-commits: ${CODEATLAS_MAX_COMMITS:20000}
     clone-timeout-seconds: ${CODEATLAS_CLONE_TIMEOUT_SECONDS:120}
     max-queued: ${CODEATLAS_MAX_QUEUED:20}
+    max-blame-files: ${CODEATLAS_MAX_BLAME_FILES:3000}
+    # 0 means one per CPU
+    threads: ${CODEATLAS_THREADS:0}
 
 management:
   endpoints:

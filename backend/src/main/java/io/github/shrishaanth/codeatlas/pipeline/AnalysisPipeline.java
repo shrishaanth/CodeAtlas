@@ -1,12 +1,17 @@
 package io.github.shrishaanth.codeatlas.pipeline;
 
 import io.github.shrishaanth.codeatlas.analyze.ImportGraph;
+import io.github.shrishaanth.codeatlas.analyze.Ownership;
 import io.github.shrishaanth.codeatlas.analyze.ReadingOrder;
 import io.github.shrishaanth.codeatlas.fetch.FetchedRepo;
 import io.github.shrishaanth.codeatlas.fetch.FileInventory;
 import io.github.shrishaanth.codeatlas.fetch.SourceFile;
+import io.github.shrishaanth.codeatlas.gitmine.BlameMiner;
 import io.github.shrishaanth.codeatlas.gitmine.GitHistory;
 import io.github.shrishaanth.codeatlas.gitmine.HistoryMiner;
+import io.github.shrishaanth.codeatlas.gitmine.IdentityResolver;
+import io.github.shrishaanth.codeatlas.gitmine.Mailmap;
+import io.github.shrishaanth.codeatlas.gitmine.People;
 import io.github.shrishaanth.codeatlas.parse.ImportResolver;
 import io.github.shrishaanth.codeatlas.parse.ParsedPythonFile;
 import io.github.shrishaanth.codeatlas.parse.PythonParser;
@@ -21,7 +26,6 @@ import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,17 +41,37 @@ public class AnalysisPipeline {
     private static final Set<String> NON_CODE = Set.of(
             "markdown", "restructuredtext", "json", "yaml", "toml", "xml", "jupyter");
 
-    private final int maxCommits;
+    /**
+     * @param maxCommits    history walk cap
+     * @param maxBlameFiles blame cap (the most-committed files are blamed first)
+     * @param threads       parallel blame workers
+     */
+    public record Options(int maxCommits, int maxBlameFiles, int threads) {
+        public static Options defaults() {
+            return new Options(20_000, 3_000, Runtime.getRuntime().availableProcessors());
+        }
+    }
+
+    private final Options options;
     private final String toolVersion;
     private final Clock clock;
 
-    public AnalysisPipeline(int maxCommits, String toolVersion, Clock clock) {
-        this.maxCommits = maxCommits;
+    public AnalysisPipeline(Options options, String toolVersion, Clock clock) {
+        this.options = options;
         this.toolVersion = toolVersion;
         this.clock = clock;
     }
 
     public Report run(FetchedRepo repo, ProgressListener progress) throws IOException {
+        try {
+            return runStages(repo, progress);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Analysis interrupted", e);
+        }
+    }
+
+    private Report runStages(FetchedRepo repo, ProgressListener progress) throws IOException, InterruptedException {
         Repository git = repo.repository();
 
         // 1. Inventory ---------------------------------------------------------------
@@ -90,11 +114,30 @@ public class AnalysisPipeline {
 
         // 4. Git history -------------------------------------------------------------
         int totalCommits = countCommits(git, repo.head());
-        progress.onProgress("history", 42, "Reading " + totalCommits + " commits");
-        GitHistory history = new HistoryMiner(maxCommits).mine(git, repo.head(),
+        progress.onProgress("history", 30, "Reading " + totalCommits + " commits");
+        GitHistory history = new HistoryMiner(options.maxCommits()).mine(git, repo.head(),
                 files.stream().map(SourceFile::path).toList(),
-                n -> progress.onProgress("history", 42 + 50 * n / Math.max(1, totalCommits),
+                n -> progress.onProgress("history", 30 + 25 * n / Math.max(1, totalCommits),
                         "Read " + n + " of " + totalCommits + " commits"));
+
+        // 5. Blame and people ----------------------------------------------------------
+        List<SourceFile> blameCandidates = files.stream()
+                .filter(f -> isCode(f) && f.parseable())
+                .sorted(Comparator.comparingInt((SourceFile f) -> commitsOf(history, f.path())).reversed()
+                        .thenComparing(SourceFile::path))
+                .toList();
+        List<String> toBlame = blameCandidates.stream().limit(options.maxBlameFiles()).map(SourceFile::path).toList();
+        List<String> overCap = blameCandidates.stream().skip(options.maxBlameFiles()).map(SourceFile::path).toList();
+        progress.onProgress("blame", 56, "Blaming " + toBlame.size() + " files");
+        BlameMiner.Result blame = new BlameMiner(options.threads()).mine(git, repo.head(), toBlame,
+                n -> progress.onProgress("blame", 56 + 36 * n / Math.max(1, toBlame.size()),
+                        "Blamed " + n + " of " + toBlame.size() + " files"));
+
+        Map<String, GitHistory.Author> identities = new HashMap<>(blame.identities());
+        identities.putAll(history.authors()); // history has every name and real commit counts; prefer it
+        People people = IdentityResolver.resolve(identities.values(), Mailmap.fromCommit(git, repo.head()));
+        Ownership.Result ownership = history.lastCommitAt() == null ? new Ownership.Result(List.of(), List.of())
+                : Ownership.compute(blame.lines(), people, history.lastCommitAt());
 
         // 5. Analyze -----------------------------------------------------------------
         progress.onProgress("analyze", 94, "Ranking files");
@@ -111,13 +154,13 @@ public class AnalysisPipeline {
                 Report.SCHEMA_VERSION,
                 new Report.RepoInfo(repo.source().display(), repo.source().name(), repo.head().getName(),
                         repo.branch(), clock.instant(), toolVersion),
-                limits(files, parsed, history),
-                overview(files, python, history),
+                limits(files, parsed, history, blame, overCap),
+                overview(files, python, history, people),
                 fileEntries(files, parsed, resolved, history),
                 components(files),
                 edges(graph),
                 readingOrder,
-                people(history));
+                people(people, ownership));
         progress.onProgress("done", 100, "Analysis complete");
         return report;
     }
@@ -128,26 +171,39 @@ public class AnalysisPipeline {
             walk.markStart(walk.parseCommit(head));
             int n = 0;
             for (RevCommit ignored : walk) {
-                if (++n == maxCommits) break;
+                if (++n == options.maxCommits()) break;
             }
             return n;
         }
     }
 
-    private Report.Limits limits(List<SourceFile> files, Map<String, ParsedPythonFile> parsed, GitHistory history) {
-        List<Report.SkippedFile> skipped = files.stream()
-                .filter(f -> f.skipReason() != null)
-                .map(f -> new Report.SkippedFile(f.path(), f.skipReason()))
-                .toList();
+    private static boolean isCode(SourceFile f) {
+        return f.language() != null && !NON_CODE.contains(f.language());
+    }
+
+    private static int commitsOf(GitHistory history, String path) {
+        GitHistory.FileHistory h = history.files().get(path);
+        return h == null ? 0 : h.commits();
+    }
+
+    private Report.Limits limits(List<SourceFile> files, Map<String, ParsedPythonFile> parsed, GitHistory history,
+                                 BlameMiner.Result blame, List<String> overBlameCap) {
+        List<Report.SkippedFile> skipped = new ArrayList<>();
+        files.stream().filter(f -> f.skipReason() != null)
+                .forEach(f -> skipped.add(new Report.SkippedFile(f.path(), f.skipReason())));
+        overBlameCap.forEach(p -> skipped.add(new Report.SkippedFile(p, "blame cap")));
+        blame.failed().forEach((p, msg) -> skipped.add(new Report.SkippedFile(p, "blame failed: " + msg)));
+        skipped.sort(Comparator.comparing(Report.SkippedFile::path));
         List<Report.ParseError> errors = parsed.values().stream()
                 .filter(p -> p.firstErrorLine() > 0)
                 .map(p -> new Report.ParseError(p.path(), p.firstErrorLine()))
                 .sorted(Comparator.comparing(Report.ParseError::path))
                 .toList();
-        return new Report.Limits(maxCommits, history.truncated(), skipped, errors);
+        return new Report.Limits(options.maxCommits(), history.truncated(), blame.ignoredRevisions(), skipped, errors);
     }
 
-    private static Report.Overview overview(List<SourceFile> files, List<SourceFile> python, GitHistory history) {
+    private static Report.Overview overview(List<SourceFile> files, List<SourceFile> python, GitHistory history,
+                                            People people) {
         Map<String, int[]> byLanguage = new TreeMap<>();
         int loc = 0;
         for (SourceFile f : files) {
@@ -165,7 +221,8 @@ public class AnalysisPipeline {
         long tests = python.stream().filter(SourceFile::test).count();
         long sources = python.size() - tests;
         Double testRatio = sources == 0 ? null : Math.round(1000.0 * tests / sources) / 1000.0;
-        return new Report.Overview(history.commitsWalked(), history.authors().size(), history.firstCommitAt(),
+        int humans = (int) people.people().stream().filter(p -> !p.bot()).count();
+        return new Report.Overview(history.commitsWalked(), humans, history.firstCommitAt(),
                 history.lastCommitAt(), files.size(), loc, languages, testRatio);
     }
 
@@ -217,16 +274,10 @@ public class AnalysisPipeline {
         return out;
     }
 
-    private static Report.People people(GitHistory history) {
-        List<GitHistory.Author> sorted = history.authors().values().stream()
-                .sorted(Comparator.comparingInt(GitHistory.Author::commits).reversed()
-                        .thenComparing(GitHistory.Author::email))
+    private static Report.People people(People people, Ownership.Result ownership) {
+        List<Report.Author> authors = people.people().stream()
+                .map(p -> new Report.Author(p.id(), p.name(), p.emails(), p.commits(), p.bot(), p.lastCommitAt()))
                 .toList();
-        Map<String, Report.Author> out = new LinkedHashMap<>();
-        for (GitHistory.Author a : sorted) {
-            String id = "a" + (out.size() + 1);
-            out.put(id, new Report.Author(id, a.name(), List.of(a.email()), a.commits()));
-        }
-        return new Report.People(List.copyOf(out.values()));
+        return new Report.People(authors, ownership.files(), ownership.directories());
     }
 }

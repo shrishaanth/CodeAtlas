@@ -49,7 +49,7 @@ class AnalysisPipelineTest {
             Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
             Report report;
             try (FetchedRepo fetched = new RepoFetcher(dir, 30).fetch(new RepoSource.Local(dir))) {
-                report = new AnalysisPipeline(1000, "test", clock).run(fetched,
+                report = new AnalysisPipeline(new AnalysisPipeline.Options(1000, 100, 2), "test", clock).run(fetched,
                         (stage, pct, detail) -> stages.add(stage));
             }
 
@@ -81,6 +81,15 @@ class AnalysisPipelineTest {
 
             assertThat(report.people().authors()).extracting(Report.Author::id, Report.Author::commits)
                     .containsExactly(org.assertj.core.groups.Tuple.tuple("a1", 1), org.assertj.core.groups.Tuple.tuple("a2", 1));
+            String bob = report.people().authors().stream().filter(a -> a.emails().contains("bob@x.org"))
+                    .findFirst().orElseThrow().id();
+            Report.Ownership models = report.people().fileOwnership().stream()
+                    .filter(o -> o.path().equals("app/models.py")).findFirst().orElseThrow();
+            assertThat(models.totalLines()).isEqualTo(9);
+            assertThat(models.owners()).extracting(Report.Owner::lines).containsExactly(6, 3);
+            assertThat(models.owners().get(1).authorId()).as("bob added 3 lines").isEqualTo(bob);
+            assertThat(report.people().directoryOwnership()).extracting(Report.Ownership::path)
+                    .containsExactly(".", "app", "tests");
         }
     }
 
@@ -92,7 +101,7 @@ class AnalysisPipelineTest {
                     "Makefile", "all:\n\techo hi\n"));
             Report report;
             try (FetchedRepo fetched = new RepoFetcher(dir, 30).fetch(new RepoSource.Local(dir))) {
-                report = new AnalysisPipeline(1000, "test", Clock.systemUTC()).run(fetched, ProgressListener.NONE);
+                report = new AnalysisPipeline(new AnalysisPipeline.Options(1000, 100, 2), "test", Clock.systemUTC()).run(fetched, ProgressListener.NONE);
             }
 
             JsonNode json = JsonMapper.builder().build().readTree(JsonMapper.builder().build().writeValueAsString(report));
