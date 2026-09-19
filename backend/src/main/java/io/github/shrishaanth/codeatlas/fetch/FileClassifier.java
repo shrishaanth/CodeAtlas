@@ -83,8 +83,13 @@ public final class FileClassifier {
         if (lower.endsWith(".min.js") || lower.endsWith(".min.css")) return "minified file";
         if (lower.endsWith(".js.map") || lower.endsWith(".css.map")) return "source map";
         if (lower.equals(".ds_store") || lower.equals("thumbs.db")) return "operating system metadata";
+        if (HASH_NAMED_DATA.matcher(lower).matches()) return "cache entry (hash-named file)";
         return null;
     }
+
+    /** A data file named only by a hash, e.g. cache/3e5a472df573dc695289f1adde2d59e0.json. */
+    private static final java.util.regex.Pattern HASH_NAMED_DATA = java.util.regex.Pattern.compile(
+            "[0-9a-f]{16,}\\.(json|pkl|pickle|bin|npy|npz|joblib|cache|dat)");
 
     /** "environment file" or "database file" for files that are usually local-only, or null. */
     public static String localFileKind(String path) {

@@ -13,7 +13,8 @@ Weights marked *initial* are guesses to be calibrated in M4 against baselines, n
   (JavaScript/TypeScript), `*_test.go`, or `*Test.java` / `*Tests.java`.
 - A file is **generated** if its path matches build output or caches (`__pycache__/`, `*.pyc`,
   `node_modules/`, `dist/`, `build/`, `*.egg-info/`, `.pytest_cache/`, `htmlcov/`, `.coverage`,
-  `*.min.js`, `*.min.css`, `*.map`, `.DS_Store`, `.ipynb_checkpoints/`), or if one of its first 5
+  `*.min.js`, `*.min.css`, `*.js.map`/`*.css.map`, `.DS_Store`, `.ipynb_checkpoints/`, data files named
+  only by a hash such as `cache/3e5a472df573dc695289f1adde2d59e0.json`), or if one of its first 5
   lines contains `@generated`, `DO NOT EDIT` or `Code generated`. Generated files are excluded from
   duplicate detection, hotspots and ownership.
 
@@ -161,7 +162,9 @@ Computed on directories (the v1 components) using resolved imports between non-t
 - Directories that depend on each other, directly or through others, form an **import cycle**
   (a strongly connected component). Each cycle becomes one finding.
 - **Layer** of a directory: 0 if it depends on no other directory; otherwise one more than the highest
-  layer it depends on, with each cycle treated as a single unit. Low layers are foundations, high
+  layer it depends on, with each cycle treated as a single unit. Files at the repository root (config,
+  scripts) are each treated as their own unit, because grouping them as one directory invents cycles
+  between unrelated files. Low layers are foundations, high
   layers are the code built on them. Directories without Python files have no layer.
 
 ## Findings
@@ -174,29 +177,45 @@ verified by opening the files. A finding is a prompt to look, not a verdict.
   (`#`, `//`). Lines that appear in more than 20 files (boilerplate) are ignored.
 - `containment = shared significant lines / significant lines of the smaller file`. Reported when
   containment is at least **0.8** and at least **10** lines are shared (*initial* thresholds).
+- Also reported, as info: two non-test Python modules with the **same file name where one directory
+  contains the other** (`src/hrp.py` and `src/core/hrp.py`) and neither imports the other. These are
+  usually two versions of one module, whatever their content. Sibling directories
+  (`services/a/app.py`, `services/b/app.py`) are not reported, and neither are pairs where one file
+  imports the other (a deliberate layering such as `flask/app.py` building on `flask/sansio/app.py`).
 
 **Repeated functions** (`repeated-logic`, info)
 - Python function bodies of at least **6** significant lines, compared after removing whitespace and
-  comments. Identical bodies in two or more files are reported together, one finding per group.
-  Methods are included; tests are excluded.
+  comments. The `def` line is left out, so a copied function that was renamed still matches.
+  Identical bodies in two or more files are reported together, one finding per group. Methods are
+  included; tests are excluded. A nested function inside an already reported copy is not repeated.
+- **Similar file names across areas**: file names reduced to a stem by splitting camelCase and
+  separators and dropping role words (service, client, tool, api, helper, util, wrapper, manager,
+  handler, adapter), so `tmdbService.js` and `tmdb_client.py` both become `tmdb`. A stem shared by at
+  least **3** non-test code files in at least **2** areas is reported. Stems every project has (`app`,
+  `config`, `models`, `utils`, `auth` and similar) are ignored. This is a hint from names only.
 
 **No static import found** (`unreferenced-file`, info)
-- Non-test Python files that no file in the repository imports, excluding likely entry points:
+- Non-test Python files that no non-test file imports, excluding likely entry points:
   `__init__.py`, `__main__.py`, `setup.py`, `conftest.py`, `manage.py`, `wsgi.py`, `asgi.py`,
   `docs/conf.py`, files with an `if __name__ == "__main__":` block, files under `scripts/`, `bin/`,
   `examples/`, `docs/`, `migrations/`, and modules named in `pyproject.toml`, `setup.cfg` or `setup.py`.
 - Frameworks and plugins often load modules by name at runtime, which static analysis cannot see.
   The finding therefore says "no static import found", not "dead code".
+- If only tests import the file, the finding says so ("Only tests import ..."): in an application that
+  usually means unused code; in a library it may be public API.
 
 **Area without tests** (`missing-tests`, info)
 - A top-level area (as in change coupling) with at least **300** lines of non-test code, no test files
-  inside it, and (for Python) no test file anywhere importing one of its files.
+  inside it, and (for Python) no test file anywhere importing one of its files. CSS and HTML are not
+  counted (they are not unit-tested), and areas named `docs`, `examples`, `scripts`, `bin` or
+  `migrations` are skipped.
 
 **Generated or local files committed** (`generated-file-committed`, warn for build output, caches and
 `.env` files; info for files marked as generated, which are often committed on purpose)
 - Files matching the generated rules above, plus environment files (`.env`, `.env.*` except
   `.env.example`/`.env.sample`/`.env.template`) and database files (`*.sqlite`, `*.sqlite3`, `*.db`).
-  Contents of `.env` files are never read or shown.
+  Contents of `.env` files are never read or shown. An `.env` file inside a test directory is info,
+  not warn: it is most likely a fixture.
 
 **Import cycle between directories** (`import-cycle`, warn)
 - Each import cycle from "Layers and import cycles" with its directories and one example import

@@ -93,7 +93,7 @@ public final class ChangeCoupling {
     }
 
     /** Top-level area of a path; see docs/metrics.md. */
-    static String area(String path) {
+    public static String area(String path) {
         String[] parts = path.split("/");
         if (parts.length == 1) return "(root)";
         if (CONTAINERS.contains(parts[0]) && parts.length > 2) return parts[0] + "/" + parts[1];

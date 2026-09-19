@@ -7,8 +7,7 @@ The static demo is literally a set of these files, so the UI must never need any
 Status: **draft**. Fields are expected to change during M1-M3. `schemaVersion` changes when they do.
 Example values below are illustrative only, not real measurements.
 
-**Produced today (M2):** `repo`, `limits`, `overview`, `files`, `components`, `edges`, `readingOrder`,
-`people`, `coupling`, `hotspots`. Sections and fields marked *(M3)* are planned, not yet written.
+**Produced today (M3):** every section below.
 Absent sections are omitted from the JSON rather than written as null.
 
 ## Conventions
@@ -35,7 +34,7 @@ Absent sections are omitted from the JSON rather than written as null.
   "people":      { ... },   // people and ownership
   "coupling":    { ... },
   "hotspots":    [ ... ],
-  "findings":    [ ... ]    // (M3)
+  "findings":    [ ... ]
 }
 ```
 
@@ -59,7 +58,8 @@ Absent sections are omitted from the JSON rather than written as null.
   "ignoredRevisions": ["9f1e..."],          // from .git-blame-ignore-revs, skipped by blame
   "skippedFiles": [ { "path": "big.py", "reason": "larger than 1 MB" },
                     { "path": "old/x.js", "reason": "blame cap" } ],
-  "parseErrors":  [ { "path": "tests/bad.py", "startLine": 3 } ]
+  "parseErrors":  [ { "path": "tests/bad.py", "startLine": 3 } ],
+  "findingsOmitted": { "unreferenced-file": 12 }   // over the cap of 50 per kind
 }
 ```
 
@@ -107,10 +107,11 @@ One import statement can produce several entries (`from pkg import a, b` where b
 
 ## `components[]`
 ```jsonc
-{ "id": "src/flask", "path": "src/flask", "files": 24, "lines": 9800 }
+{ "id": "src/flask", "path": "src/flask", "files": 24, "lines": 9800, "layer": 1 }
 ```
-In v1 a component is a directory (`.` for the root). *(M3)* adds `layer`, from import direction:
-components that import nothing internal sit at layer 0.
+In v1 a component is a directory (`.` for the root). `layer` comes from import direction: 0 means the
+directory imports no other directory; it is null for directories without Python files and for `.`
+(root files are layered individually). Definitions: `docs/metrics.md`, "Layers and import cycles".
 
 ## `edges[]`
 ```jsonc
@@ -180,15 +181,18 @@ Commits that touch more than 30 files (bulk reformatting, mass renames) are excl
 ## `findings[]`
 ```jsonc
 {
-  "id": "dup-001",
-  "kind": "duplicate-module",      // duplicate-module | unreferenced-file | missing-tests |
-                                   // generated-file-committed | repeated-logic
-  "severity": "warn",              // info | warn
-  "title": "Two modules named hrp.py with near-identical content",
-  "detail": "src/hrp.py and src/core/hrp.py share 92% of their lines.",
+  "id": "import-cycle-1",          // kind + position within the kind
+  "kind": "import-cycle",          // duplicate-module | repeated-logic | import-cycle |
+                                   // generated-file-committed | missing-tests | unreferenced-file
+  "severity": "warn",              // warn | info
+  "title": "Import cycle between 2 directories: src, src/core",
+  "detail": "Each of these directories depends on the others through imports, ...",
   "evidence": [
-    { "path": "src/hrp.py", "startLine": 1, "endLine": 80 },
-    { "path": "src/core/hrp.py", "startLine": 1, "endLine": 85 }
+    { "path": "src/dashboard.py", "startLine": 15, "endLine": 15, "note": "imports src/core/backtest.py" },
+    { "path": "src/core/backtest.py", "startLine": 7, "endLine": 7, "note": "imports src/covariance.py" }
   ]
 }
 ```
+Every finding carries evidence: a path, optionally a line range, optionally a note. `startLine`,
+`endLine` and `note` are omitted when not applicable; a note without a path summarises files not listed
+("and 12 more"). Rules for every kind: `docs/metrics.md`, "Findings". At most 50 findings per kind.

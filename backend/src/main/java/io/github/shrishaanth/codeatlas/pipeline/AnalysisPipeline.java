@@ -1,8 +1,10 @@
 package io.github.shrishaanth.codeatlas.pipeline;
 
 import io.github.shrishaanth.codeatlas.analyze.ChangeCoupling;
+import io.github.shrishaanth.codeatlas.analyze.Findings;
 import io.github.shrishaanth.codeatlas.analyze.Hotspots;
 import io.github.shrishaanth.codeatlas.analyze.ImportGraph;
+import io.github.shrishaanth.codeatlas.analyze.Layers;
 import io.github.shrishaanth.codeatlas.analyze.Ownership;
 import io.github.shrishaanth.codeatlas.analyze.ReadingOrder;
 import io.github.shrishaanth.codeatlas.fetch.FetchedRepo;
@@ -79,11 +81,14 @@ public class AnalysisPipeline {
         // 2. Parse -------------------------------------------------------------------
         List<SourceFile> python = files.stream().filter(SourceFile::isPython).toList();
         Map<String, ParsedPythonFile> parsed = new HashMap<>();
+        Map<String, String> pythonText = new HashMap<>(); // kept for findings, so files are read once
         try (PythonParser parser = new PythonParser()) {
             int done = 0;
             for (SourceFile f : python) {
                 if (f.parseable()) {
-                    parsed.put(f.path(), parser.parse(f.path(), FileInventory.readText(git, f.blobId())));
+                    String text = FileInventory.readText(git, f.blobId());
+                    pythonText.put(f.path(), text);
+                    parsed.put(f.path(), parser.parse(f.path(), text));
                 }
                 done++;
                 if (done % 100 == 0 || done == python.size()) {
@@ -97,6 +102,7 @@ public class AnalysisPipeline {
         ImportResolver resolver = new ImportResolver(python.stream().map(SourceFile::path).toList());
         ImportGraph graph = new ImportGraph();
         Map<String, List<ResolvedImport>> resolved = new HashMap<>();
+        Map<String, Integer> importLines = new HashMap<>(); // "from\u0000to" -> first import line
         for (SourceFile f : python) {
             graph.addNode(f.path());
             ParsedPythonFile pf = parsed.get(f.path());
@@ -105,7 +111,9 @@ public class AnalysisPipeline {
             pf.imports().forEach(imp -> list.addAll(resolver.resolve(f.path(), imp)));
             resolved.put(f.path(), list);
             for (ResolvedImport r : list) {
-                if (r.resolved()) graph.addEdge(f.path(), r.targetPath());
+                if (!r.resolved()) continue;
+                graph.addEdge(f.path(), r.targetPath());
+                importLines.putIfAbsent(f.path() + "\u0000" + r.targetPath(), r.imp().line());
             }
         }
 
@@ -148,21 +156,32 @@ public class AnalysisPipeline {
 
         Report.Coupling coupling = ChangeCoupling.compute(history.commits(), graph);
         List<Report.Hotspot> hotspots = Hotspots.rank(files, commitsPerFile);
+        // Root-level files (config, scripts) share no real module, so each is its own unit for layers and
+        // cycles; grouping them as "." would invent cycles through unrelated files.
+        Layers.Result layers = Layers.compute(graph.restrictTo(nonTest),
+                p -> componentOf(p).equals(".") ? p : componentOf(p));
+
+        progress.onProgress("findings", 96, "Looking for findings");
+        Map<String, SourceFile> byPath = new HashMap<>();
+        files.forEach(f -> byPath.put(f.path(), f));
+        Findings.Result findings = Findings.compute(new Findings.Input(files, parsed, graph, layers, importLines,
+                path -> pythonText.computeIfAbsent(path, p -> readQuietly(git, byPath.get(p)))));
 
         progress.onProgress("report", 98, "Assembling report");
         Report report = new Report(
                 Report.SCHEMA_VERSION,
                 new Report.RepoInfo(repo.source().display(), repo.source().name(), repo.head().getName(),
                         repo.branch(), clock.instant(), toolVersion),
-                limits(files, parsed, history, blame, overCap),
+                limits(files, parsed, history, blame, overCap, findings.omitted()),
                 overview(files, python, history, people),
                 fileEntries(files, parsed, resolved, history, people),
-                components(files),
+                components(files, layers.layers()),
                 edges(graph, coupling),
                 readingOrder,
                 people(people, ownership),
                 coupling,
-                hotspots);
+                hotspots,
+                findings.findings());
         progress.onProgress("done", 100, "Analysis complete");
         return report;
     }
@@ -185,7 +204,8 @@ public class AnalysisPipeline {
     }
 
     private Report.Limits limits(List<SourceFile> files, Map<String, ParsedPythonFile> parsed, GitHistory history,
-                                 BlameMiner.Result blame, List<String> overBlameCap) {
+                                 BlameMiner.Result blame, List<String> overBlameCap,
+                                 Map<String, Integer> findingsOmitted) {
         List<Report.SkippedFile> skipped = new ArrayList<>();
         files.stream().filter(f -> f.skipReason() != null)
                 .forEach(f -> skipped.add(new Report.SkippedFile(f.path(), f.skipReason())));
@@ -197,7 +217,8 @@ public class AnalysisPipeline {
                 .map(p -> new Report.ParseError(p.path(), p.firstErrorLine()))
                 .sorted(Comparator.comparing(Report.ParseError::path))
                 .toList();
-        return new Report.Limits(options.maxCommits(), history.truncated(), blame.ignoredRevisions(), skipped, errors);
+        return new Report.Limits(options.maxCommits(), history.truncated(), blame.ignoredRevisions(), skipped, errors,
+                findingsOmitted);
     }
 
     private static Report.Overview overview(List<SourceFile> files, List<SourceFile> python, GitHistory history,
@@ -256,7 +277,16 @@ public class AnalysisPipeline {
         return slash < 0 ? "." : path.substring(0, slash);
     }
 
-    private static List<Report.Component> components(List<SourceFile> files) {
+    private static String readQuietly(Repository git, SourceFile f) {
+        if (f == null || f.binary() || f.skipReason() != null) return "";
+        try {
+            return FileInventory.readText(git, f.blobId());
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
+    private static List<Report.Component> components(List<SourceFile> files, Map<String, Integer> layers) {
         Map<String, int[]> acc = new TreeMap<>();
         for (SourceFile f : files) {
             int[] a = acc.computeIfAbsent(componentOf(f.path()), k -> new int[2]);
@@ -264,7 +294,7 @@ public class AnalysisPipeline {
             a[1] += f.lines();
         }
         List<Report.Component> out = new ArrayList<>();
-        acc.forEach((id, a) -> out.add(new Report.Component(id, id, a[0], a[1])));
+        acc.forEach((id, a) -> out.add(new Report.Component(id, id, a[0], a[1], layers.get(id))));
         return out;
     }
 
