@@ -16,7 +16,7 @@ import java.time.Clock;
  * Offline analysis without the web server or database: writes a report JSON file.
  * Used to produce the static demo reports and the evaluation runs.
  * <pre>
- * java -cp &lt;classpath&gt; io.github.shrishaanth.codeatlas.cli.AnalyzeCommand &lt;github-url|path&gt; &lt;out.json&gt;
+ * java -cp &lt;classpath&gt; io.github.shrishaanth.codeatlas.cli.AnalyzeCommand &lt;github-url|path&gt; &lt;out.json&gt; [--pretty]
  * </pre>
  */
 public final class AnalyzeCommand {
@@ -25,8 +25,9 @@ public final class AnalyzeCommand {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 2) {
-            System.err.println("usage: AnalyzeCommand <github-url|local-path> <out.json>");
+        boolean pretty = args.length == 3 && args[2].equals("--pretty");
+        if (args.length != 2 && !pretty) {
+            System.err.println("usage: AnalyzeCommand <github-url|local-path> <out.json> [--pretty]");
             System.exit(2);
         }
         RepoSource source = RepoSource.parse(args[0], true);
@@ -43,7 +44,8 @@ public final class AnalyzeCommand {
         } finally {
             Files.deleteIfExists(workDir);
         }
-        JsonMapper mapper = JsonMapper.builder().enable(SerializationFeature.INDENT_OUTPUT).build();
+        // Compact by default: demo reports are committed and downloaded by every visitor.
+        JsonMapper mapper = JsonMapper.builder().configure(SerializationFeature.INDENT_OUTPUT, pretty).build();
         mapper.writeValue(out.toFile(), report);
         System.err.printf("wrote %s (%d KB) in %.1f s total%n", out, Files.size(out) / 1024, (System.nanoTime() - t0) / 1e9);
     }
