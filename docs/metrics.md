@@ -125,10 +125,13 @@ Files that are often changed in the same commit, whether or not one imports the 
 - Only files with at least **5 commits** are considered (*initial*), to avoid coincidences.
 - For a pair A, B: `together` = commits that changed both;
   `degree = together / average(commits of A, commits of B)`, between 0 and 1.
+  All counts here (including "commits of A") use only the commits that were not skipped as too large.
   Averaging keeps a file changed in every release (a changelog) from looking coupled to everything.
 - A pair is reported if `together >= 5` and `degree >= 0.3` (*initial*), up to 300 pairs, strongest first.
 - `hasImportEdge` says whether either file imports the other. Pairs without one are hidden
-  dependencies: nothing in the code says they are related, but history does.
+  dependencies: nothing in the code says they are related, but history does. It is **null (unknown)**
+  when either file is not a parsed Python file: CodeAtlas cannot see imports in other languages, so it
+  must not claim there are none.
 - **Component coupling** does the same for top-level areas: the first directory of a path, or the
   first two if the first is a generic container (`src`, `lib`, `libs`, `packages`, `services`,
   `apps`, `modules`, `components`). Files at the root form `(root)`. Reported if `together >= 3`.

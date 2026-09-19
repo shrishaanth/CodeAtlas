@@ -1,5 +1,6 @@
 package io.github.shrishaanth.codeatlas.pipeline;
 
+import io.github.shrishaanth.codeatlas.analyze.ChangeCoupling;
 import io.github.shrishaanth.codeatlas.analyze.ImportGraph;
 import io.github.shrishaanth.codeatlas.analyze.Ownership;
 import io.github.shrishaanth.codeatlas.analyze.ReadingOrder;
@@ -149,6 +150,8 @@ public class AnalysisPipeline {
         history.files().forEach((p, h) -> commitsPerFile.put(p, h.commits()));
         List<Report.ReadingItem> readingOrder = ReadingOrder.rank(graph.restrictTo(nonTest), candidates, commitsPerFile);
 
+        Report.Coupling coupling = ChangeCoupling.compute(history.commits(), graph);
+
         progress.onProgress("report", 98, "Assembling report");
         Report report = new Report(
                 Report.SCHEMA_VERSION,
@@ -158,9 +161,10 @@ public class AnalysisPipeline {
                 overview(files, python, history, people),
                 fileEntries(files, parsed, resolved, history),
                 components(files),
-                edges(graph),
+                edges(graph, coupling),
                 readingOrder,
-                people(people, ownership));
+                people(people, ownership),
+                coupling);
         progress.onProgress("done", 100, "Analysis complete");
         return report;
     }
@@ -265,12 +269,13 @@ public class AnalysisPipeline {
         return out;
     }
 
-    private static List<Report.Edge> edges(ImportGraph graph) {
+    private static List<Report.Edge> edges(ImportGraph graph, Report.Coupling coupling) {
         List<Report.Edge> out = new ArrayList<>();
         for (String from : graph.nodes()) {
             graph.importsOf(from).stream().sorted()
                     .forEach(to -> out.add(new Report.Edge(from, to, "import", 1)));
         }
+        coupling.files().forEach(p -> out.add(new Report.Edge(p.a(), p.b(), "cochange", p.together())));
         return out;
     }
 

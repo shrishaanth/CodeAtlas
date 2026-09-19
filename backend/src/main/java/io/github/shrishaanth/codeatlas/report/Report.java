@@ -21,7 +21,8 @@ public record Report(
         List<Component> components,
         List<Edge> edges,
         List<ReadingItem> readingOrder,
-        People people) {
+        People people,
+        Coupling coupling) {
 
     public static final String SCHEMA_VERSION = "0.1";
 
@@ -94,5 +95,21 @@ public record Report(
     }
 
     public record Owner(String authorId, int lines, double share) {
+    }
+
+    /** @param skippedLargeCommits commits left out for touching too many files */
+    public record Coupling(List<FilePair> files, List<AreaPair> components, int skippedLargeCommits) {
+    }
+
+    /**
+     * @param degree        together / average(aCommits, bCommits)
+     * @param hasImportEdge whether either file imports the other; null (unknown) unless both are parsed files
+     */
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public record FilePair(String a, String b, int together, int aCommits, int bCommits, double degree,
+                           Boolean hasImportEdge) {
+    }
+
+    public record AreaPair(String a, String b, int together, int aCommits, int bCommits, double degree) {
     }
 }
