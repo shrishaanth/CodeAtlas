@@ -64,7 +64,7 @@ public final class ReadingOrder {
     private static List<String> reasons(int fanIn, int commits) {
         List<String> r = new ArrayList<>();
         r.add(fanIn == 0 ? "Not imported by other non-test files"
-                : "Imported by " + fanIn + " other " + (fanIn == 1 ? "file" : "files"));
+                : "Imported by " + fanIn + " non-test " + (fanIn == 1 ? "file" : "files"));
         r.add(commits == 0 ? "No commits recorded" : "Changed in " + commits + (commits == 1 ? " commit" : " commits"));
         return r;
     }

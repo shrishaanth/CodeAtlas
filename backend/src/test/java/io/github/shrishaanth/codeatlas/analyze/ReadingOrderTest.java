@@ -59,7 +59,7 @@ class ReadingOrderTest {
         assertThat(top.parts()).containsKeys("centrality", "fanIn", "churn");
         assertThat(top.parts().get("centrality")).isEqualTo(1.0);
         assertThat(top.parts().get("fanIn")).isEqualTo(1.0);
-        assertThat(top.reasons()).containsExactly("Imported by 2 other files", "Changed in 10 commits");
+        assertThat(top.reasons()).containsExactly("Imported by 2 non-test files", "Changed in 10 commits");
         double expected = ReadingOrder.W_CENTRALITY * 1.0 + ReadingOrder.W_FAN_IN * 1.0
                 + ReadingOrder.W_CHURN * ReadingOrder.logNorm(10, 50);
         assertThat(top.score()).isCloseTo(expected, within(0.001));

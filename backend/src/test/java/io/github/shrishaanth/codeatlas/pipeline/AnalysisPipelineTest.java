@@ -69,7 +69,7 @@ class AnalysisPipelineTest {
             assertThat(report.readingOrder()).extracting(Report.ReadingItem::path)
                     .containsExactly("app/models.py", "app/views.py", "app/cli.py");
             assertThat(report.readingOrder().get(0).reasons())
-                    .containsExactly("Imported by 2 other files", "Changed in 2 commits");
+                    .containsExactly("Imported by 2 non-test files", "Changed in 2 commits");
 
             Report.FileEntry views = report.files().stream().filter(f -> f.path().equals("app/views.py")).findFirst().orElseThrow();
             assertThat(views.imports()).extracting(Report.Import::module, Report.Import::resolvedPath, Report.Import::external)
