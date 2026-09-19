@@ -70,6 +70,16 @@ class IdentityResolverTest {
     }
 
     @Test
+    void comparesNamesAfterUnicodeNormalization() {
+        // Seen in Flask's history: the same "ä" as one code point and as "a" + combining diaeresis.
+        People p = IdentityResolver.resolve(List.of(
+                id("dan@a.org", "Daniel Neuhäuser", 5, "2020-01-01T00:00:00Z"),
+                id("dan@b.org", "Daniel Neuhäuser", 3, "2021-01-01T00:00:00Z")), Mailmap.EMPTY);
+
+        assertThat(p.people()).hasSize(1);
+    }
+
+    @Test
     void flagsBots() {
         People p = IdentityResolver.resolve(List.of(
                 id("49699333+dependabot[bot]@users.noreply.github.com", "dependabot[bot]", 50, "2024-01-01T00:00:00Z"),

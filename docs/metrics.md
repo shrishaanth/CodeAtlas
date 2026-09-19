@@ -87,7 +87,7 @@ One person often commits under several names or emails (work and personal email,
 Identities are merged in this order; each rule links identities, and linked identities become one person.
 1. **`.mailmap`** at the analyzed commit, if present (git's own format for mapping identities).
 2. **Same email**, ignoring case.
-3. **Same full name**, ignoring case and extra spaces, but only if the name has at least two words.
+3. **Same full name**, ignoring case, extra spaces and Unicode form (NFC), but only if the name has at least two words.
    Single names like `david` or `admin` are too common to merge on.
 
 A person's display name is the name on their most recent commit. Merging cannot be proven correct;

@@ -1,5 +1,6 @@
 package io.github.shrishaanth.codeatlas.gitmine;
 
+import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -88,7 +89,9 @@ public final class IdentityResolver {
     }
 
     static String normalizeName(String name) {
-        return name == null ? "" : name.strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+        if (name == null) return "";
+        // NFC: "ä" can be one code point or "a" plus a combining mark; both must compare equal.
+        return Normalizer.normalize(name, Normalizer.Form.NFC).strip().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
     }
 
     private static final class Group {
