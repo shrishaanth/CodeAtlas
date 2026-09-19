@@ -5,16 +5,23 @@ start reading, who owns what, which files change together, hotspots and concrete
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
 number can be traced back to a file, line or commit. An LLM is optional and only used for Q&A.
 
-> **Status:** early development. Milestone M1 of [PLAN.md](PLAN.md) is done: a GitHub repository can be
-> analyzed end to end (Python imports, git history, import graph, reading order). Ownership, change coupling,
-> hotspots and findings come in M2-M3. Reading order is not yet evaluated; see the known issue in PLAN.md (M4).
+> **Status:** early development. Milestones M1-M2 of [PLAN.md](PLAN.md) are done: import graph, reading
+> order, ownership, change coupling and hotspots. Findings come in M3. Nothing is evaluated against an
+> independent source yet (M4); reading order has a known weakness described in PLAN.md.
 
 ## What it produces today
 - **Overview:** commits, contributors, files, lines of code, languages, test-file ratio, history span.
 - **Reading order:** Python files ranked by centrality in the import graph, fan-in and churn, each with the
   parts of its score and plain-language reasons. Definitions: [docs/metrics.md](docs/metrics.md).
-- **Import graph:** interactive, grouped by directory, showing what a file imports and what imports it.
-- **File details:** imports (in-repo, external, unresolved), importers, definitions with GitHub links.
+- **Import graph:** interactive, grouped by directory, showing what a file imports and what imports it,
+  optionally with co-change links.
+- **Ownership:** who last changed each current line (git blame, whitespace ignored, `.git-blame-ignore-revs`
+  honoured), per file and directory, with bus factor and single-owner / orphaned flags. One person's
+  different emails and names are merged (`.mailmap`, same email, same full name); bots are excluded.
+- **Change coupling:** files and top-level areas that change in the same commits, marking pairs with no
+  import between them (hidden dependencies).
+- **Hotspots:** code that is both frequently changed and deeply nested (indentation complexity).
+- **File details:** owners, files it usually changes with, imports, importers, definitions with GitHub links.
 - **JSON export** of the whole report. Format: [docs/report-schema.md](docs/report-schema.md).
 
 Pre-computed reports in `frontend/public/demo/` open without any backend.
@@ -67,6 +74,8 @@ All settings come from environment variables.
 | `CODEATLAS_MAX_COMMITS` | backend: history walk cap | `20000` |
 | `CODEATLAS_CLONE_TIMEOUT_SECONDS` | backend | `120` |
 | `CODEATLAS_MAX_QUEUED` | backend: waiting analyses before refusing | `20` |
+| `CODEATLAS_MAX_BLAME_FILES` | backend: files blamed per analysis, most-changed first | `3000` |
+| `CODEATLAS_THREADS` | backend: parallel blame workers, `0` = one per CPU | `0` |
 | `VITE_API_BASE_URL` | frontend (build time) | empty, meaning same origin |
 
 ## Repository layout

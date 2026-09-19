@@ -56,7 +56,7 @@ Clone a repo, parse Python imports and symbols, mine git, build the import graph
 reading order, and show the graph and ranked list in the UI. Ugly is fine. End to end is the goal.
 - Exit: analyzing a public Python repo shows a clickable graph and a reading order with score components.
 
-### M2: Git analyzers (weeks 4-5, ~40-50 h)
+### M2: Git analyzers (weeks 4-5, ~40-50 h) -- DONE 2026-09-19
 Ownership from blame, bus-factor flags, change coupling (file and component level, with counts and
 confidence), hotspots. Basic author alias merging.
 
@@ -88,6 +88,14 @@ CLI or MCP server, reading the same report JSON.
 ### M7: Ship (weeks 13-14, ~20-30 h)
 Pre-computed demo on Vercel, live backend on Render (with size limits and a cold-start message),
 README, architecture diagram, short demo video.
+
+## Measurements so far (for deployment and the README)
+- Flask (5.5k commits, 108 blamed files): full analysis about 8-10 s locally, excluding the clone.
+- psf/requests (6.5k commits) in Docker capped at **512 MB and 1 CPU** (Render free-tier shape):
+  finished in 56 s including the clone, peak container memory **267 MiB**, no out-of-memory kill.
+  Without a cap the JVM grows to about 510 MiB simply because memory is available; that number is not a need.
+- On Render set `CODEATLAS_THREADS=1` (one CPU) and keep the blame cap; very large repos still need a
+  repository size limit before cloning (M7).
 
 ## Cut order if time runs short
 1. M6 integration, 2. M5 Q&A, 3. some M3 findings. Never cut M4.
