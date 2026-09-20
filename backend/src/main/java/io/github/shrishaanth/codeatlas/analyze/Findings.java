@@ -41,7 +41,10 @@ public final class Findings {
     private static final Set<String> ENTRY_POINT_NAMES = Set.of(
             "__init__.py", "__main__.py", "setup.py", "conftest.py", "manage.py", "wsgi.py", "asgi.py");
     private static final Set<String> UNTESTABLE = Set.of("css", "html");
-    private static final Set<String> ENTRY_POINT_DIRS = Set.of("scripts", "bin", "examples", "docs", "migrations");
+    private static final Set<String> ENTRY_POINT_DIRS = Set.of(
+            "scripts", "bin", "examples", "docs", "migrations", "benchmarks", "benchmark", "bench");
+    /** Above this, "only tests import it" is reported once for the group instead of per file. */
+    static final int GROUP_TEST_ONLY_FROM = 4;
     private static final Pattern MAIN_GUARD = Pattern.compile(
             "__name__\\s*==\\s*['\"]__main__['\"]|['\"]__main__['\"]\\s*==\\s*__name__");
     private static final Pattern CONFIG_MODULE = Pattern.compile("([A-Za-z_][\\w.]*)\\s*:\\s*[A-Za-z_]\\w*");
@@ -332,15 +335,29 @@ public final class Findings {
                 .sorted(Comparator.comparingInt(SourceFile::lines).reversed().thenComparing(SourceFile::path))
                 .toList();
         List<Report.Finding> out = new ArrayList<>();
+        List<SourceFile> testOnly = new ArrayList<>();
         for (SourceFile f : candidates) {
-            int tests = in.graph().importersOf(f.path()).size();
-            if (tests == 0) {
+            if (in.graph().importersOf(f.path()).isEmpty()) {
                 out.add(finding("unreferenced-file", "info", "No static import found: " + f.path(),
                         "No file in the repository imports this module, and it does not look like an entry point. "
                                 + "It may be unused, or loaded by name at runtime (plugins, framework conventions), "
                                 + "which static analysis cannot see.",
                         List.of(wholeFile(f))));
             } else {
+                testOnly.add(f);
+            }
+        }
+        // A library's public API is naturally imported only by its own tests, so many of these at once
+        // say something about the project, not about each file. One finding is more useful than twenty.
+        if (testOnly.size() >= GROUP_TEST_ONLY_FROM) {
+            out.add(finding("unreferenced-file", "info",
+                    testOnly.size() + " modules are imported only by tests",
+                    "No other code in the repository imports them. In an application that usually means unused "
+                            + "code; in a library it is normal for public API that users import.",
+                    testOnly.stream().map(Findings::wholeFile).toList()));
+        } else {
+            for (SourceFile f : testOnly) {
+                int tests = in.graph().importersOf(f.path()).size();
                 out.add(finding("unreferenced-file", "info", "Only tests import " + f.path(),
                         tests + (tests == 1 ? " test file imports" : " test files import") + " this module, but no "
                                 + "other code does. In an application that usually means it is unused; in a library "

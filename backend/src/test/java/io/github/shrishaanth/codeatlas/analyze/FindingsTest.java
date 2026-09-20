@@ -242,6 +242,31 @@ class FindingsTest {
     }
 
     @Test
+    void manyTestOnlyModulesBecomeOneFinding() {
+        // A library's public API is imported by its tests and by users, not by the library itself.
+        Map<String, String> files = new HashMap<>();
+        files.put("lib/__init__.py", "");
+        for (int i = 0; i < 5; i++) {
+            files.put("lib/feature" + i + ".py", "class Feature" + i + ":\n    pass\n");
+            files.put("tests/test_feature" + i + ".py", "from lib.feature" + i + " import Feature" + i + "\n");
+        }
+        files.put("benchmarks/speed.py", "print(1)\n");
+
+        List<Report.Finding> found = ofKind(Findings.compute(input(files)), "unreferenced-file");
+
+        assertThat(found).extracting(Report.Finding::title)
+                .containsExactly("5 modules are imported only by tests");
+        assertThat(found.get(0).evidence()).hasSize(5);
+    }
+
+    @Test
+    void benchmarkScriptsAreEntryPointsLikeScriptsAndExamples() {
+        assertThat(Findings.isLikelyEntryPoint("benchmarks/json_benchmark.py")).isTrue();
+        assertThat(Findings.isLikelyEntryPoint("bench/run.py")).isTrue();
+        assertThat(Findings.isLikelyEntryPoint("src/app/benchmarking.py")).isFalse();
+    }
+
+    @Test
     void recognisesHashNamedCacheEntries() {
         assertThat(FileClassifier.generatedReason("svc/cache/3e5a472df573dc695289f1adde2d59e0.json"))
                 .isEqualTo("cache entry (hash-named file)");
