@@ -1,0 +1,41 @@
+# Render blueprint: a Docker web service plus a Postgres database.
+# Create it from the Render dashboard with "New" -> "Blueprint", pointed at this repository.
+# The language-model key is deliberately not here: set CODEATLAS_QA_* in the dashboard so it never
+# reaches the repository. Without them the app still runs; questions then return matching code only.
+services:
+  - type: web
+    name: codeatlas-api
+    runtime: docker
+    plan: free
+    region: frankfurt          # pick the region closest to you
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: DATABASE_URL      # postgres://... ; the app converts it to a JDBC URL
+        fromDatabase:
+          name: codeatlas-db
+          property: connectionString
+      - key: CODEATLAS_CORS_ALLOWED_ORIGINS
+        sync: false            # set to your Vercel URL, e.g. https://codeatlas.vercel.app
+      # One CPU on the free plan, so one blame worker; caps keep a large repository from
+      # exhausting the 512 MB of memory.
+      - key: CODEATLAS_THREADS
+        value: "1"
+      - key: CODEATLAS_MAX_COMMITS
+        value: "20000"
+      - key: CODEATLAS_MAX_BLAME_FILES
+        value: "1500"
+      - key: CODEATLAS_MAX_QUEUED
+        value: "5"
+      - key: CODEATLAS_QA_MAX_QUESTIONS_PER_HOUR
+        value: "20"
+      # Never enable on a public server: it would let visitors read the server's filesystem.
+      - key: CODEATLAS_ALLOW_LOCAL_PATHS
+        value: "false"
+
+databases:
+  - name: codeatlas-db
+    plan: free
+    databaseName: codeatlas
+    user: codeatlas

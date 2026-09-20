@@ -13,6 +13,9 @@ public class CodeAtlasApplication {
         // Postgres driver sends it on connect and Postgres 17 rejects legacy names such as
         // "Asia/Calcutta". Running in UTC avoids that on every developer machine.
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+        // Hosting providers hand out postgres://user:pass@host/db; the JDBC driver needs jdbc:postgresql://.
+        io.github.shrishaanth.codeatlas.config.DatabaseUrl.springProperties(System.getenv("DATABASE_URL"))
+                .forEach(System::setProperty);
         SpringApplication.run(CodeAtlasApplication.class, args);
     }
 }
