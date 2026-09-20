@@ -5,9 +5,9 @@ start reading, who owns what, which files change together, hotspots and concrete
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
 number can be traced back to a file, line or commit. An LLM is optional and only used for Q&A.
 
-> **Status:** early development. Milestones M1-M4 of [PLAN.md](PLAN.md) are done. The reading order has
-> been measured against independent sources on 20 repositories, which is how its current formula was
-> chosen: see [docs/evaluation.md](docs/evaluation.md), including where it only ties simple baselines.
+> **Status:** early development. Milestones M1-M5 of [PLAN.md](PLAN.md) are done. The reading order and
+> the question-answering search have both been measured, which is how their current behaviour was
+> chosen: see [docs/evaluation.md](docs/evaluation.md), including where they only tie simple baselines.
 
 ## What it produces today
 - **Overview:** commits, contributors, files, lines of code, languages, test-file ratio, history span.
@@ -114,7 +114,9 @@ places documentation-mentioned files at mean percentile **0.69**, against 0.67 f
 0.67 for sorting by commit count and 0.50 for random order. The first version of the formula scored 0.66
 and lost to both baselines; measuring it is what led to replacing it. Ownership matched CODEOWNERS for the
 top owner in 6 of 16 directories, across the only 2 repositories in the set that have a CODEOWNERS file.
-Method, per-repository numbers and limits: [docs/evaluation.md](docs/evaluation.md).
+Question-answering search finds the definition of a named symbol in the top 8 results in 98-100% of
+cases on two repositories. Method, per-repository numbers and limits:
+[docs/evaluation.md](docs/evaluation.md).
 
 ## Repository layout
 

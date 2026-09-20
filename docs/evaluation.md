@@ -82,6 +82,17 @@ java -cp "target/classes:$(cat cp.txt)" io.github.shrishaanth.codeatlas.eval.Eva
 (On Windows use `;` in the classpath.) Clones are cached in the last directory, so a rerun is fast.
 The command writes `eval/results.json` and prints the tables below.
 
+To search for a better reading-order formula on the training half and check it on the held-out half:
+```bash
+java -cp "target/classes:$(cat cp.txt)" io.github.shrishaanth.codeatlas.eval.Tuner ../eval/features.json
+```
+
+To measure question-answering retrieval against an analysis already stored in the database:
+```bash
+java -cp "target/classes:$(cat cp.txt)" io.github.shrishaanth.codeatlas.eval.RetrievalEvalCommand \
+    jdbc:postgresql://localhost:5432/codeatlas codeatlas codeatlas <analysis-id>
+```
+
 ## Results
 
 Run on 2026-09-20 over the 20 repositories in [eval/repos.txt](../eval/repos.txt);
@@ -166,6 +177,39 @@ Analysis of a cached clone, on a laptop: 0.8 s for a 600-commit repository, 4-10
 29 s for the largest in the set (fastapi, 7,713 commits and 1,138 Python files). Cloning dominates
 for anything over a few hundred commits.
 
+### Question answering: can the search find a definition?
+
+Retrieval is the part of question answering that can be measured without a language model. For symbols
+the repository really contains, the harness asks "where is X defined?" and checks whether the chunk
+holding that definition comes back. Symbol-name questions are the easy case, so read this as a floor.
+
+| Repo | Symbols sampled | Definition in the top 8 | Definition ranked first |
+|---|---:|---:|---:|
+| pallets/itsdangerous | 59 | 59 (100%) | 40 (68%) |
+| pallets/flask | 60 of 385 | 59 (98%) | 28 (47%) |
+
+Both numbers come from `RetrievalEvalCommand` against a stored analysis, and both improved during this
+milestone because the measurement found real faults:
+
+- itsdangerous started at 93%: the "at most 3 chunks per file" rule, which spreads answers across
+  files, was dropping the definition when sibling methods in the same file matched first. A chunk
+  whose symbol the question names is now exempt from that rule.
+- flask started at 83%: in a large repository the definition never reached the ranking step, because
+  the database returned the 60 best text matches and the definition was not among them. Chunks whose
+  symbol the question names are now fetched first.
+
+"Ranked first" stays near half for flask and two thirds for itsdangerous, and that is fair: several
+classes define `save_session` or `dumps`, so "where is dumps defined" has no single right answer
+without naming the class. The one remaining miss on flask is `EnvironBuilder.__init__`, one of dozens
+of `__init__` methods.
+
+**Not measured:** whether the prose a model writes is *correct*. What is checked automatically is
+where each citation points (`exact`, `inside`, `unsupported`), not whether the sentence fairly
+summarises the code it cites. One observation worth recording: given an excerpt of 190 lines, the
+model invented narrower line numbers inside it that pointed at the wrong code, which is why classes
+are now split into methods and why citations that are merely "inside" an excerpt are labelled as
+such instead of being called verified.
+
 ## What this evaluation does and does not show
 
 **It shows:**
@@ -173,10 +217,14 @@ for anything over a few hundred commits.
   no part in choosing it. The margin is small.
 - The PageRank centrality idea, which was the most complex part of v1, did not work and was removed.
 - Ownership matched CODEOWNERS for the top owner in 6 of 16 directories, across only 2 repositories.
+- Search finds the definition of a named symbol in the top 8 results in 98-100% of cases on two
+  repositories.
 
 **It does not show:**
 - That the ranking is *useful*. No one was asked to learn a codebase with and without it. Mean
   percentile against documentation mentions is a proxy, not a measure of onboarding.
 - That it works outside well-maintained open-source Python libraries.
 - Anything about the findings, the change coupling or the hotspots: those are not evaluated here.
+- Whether answers written by a language model are correct or useful: only their citations are checked,
+  and only for where they point.
 

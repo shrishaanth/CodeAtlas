@@ -79,9 +79,22 @@ Also compare against a baseline (e.g. rank by file size or plain import count) s
 - Still unevaluated: findings, change coupling, hotspots, and the 5-line candidate threshold.
   `docs/conf.py` and other non-product Python files are still ranked.
 
-### M5: Q&A, optional (weeks 10-11, ~30-40 h)
-Chunk code, keyword index plus embeddings, retrieval, LLM answer with `path:line` citations and shown source code.
-Cut first if time is short.
+### M5: Q&A, optional (weeks 10-11, ~30-40 h) -- DONE 2026-09-20
+Chunking by symbol, Postgres full-text retrieval with symbol-aware ranking, and an optional language
+model that may only answer from retrieved excerpts.
+
+**Decisions and outcomes**
+- **No embeddings.** Keyword search with structural boosts finds a named definition in the top 8 in
+  98-100% of cases (measured, see docs/evaluation.md), so the extra infrastructure was not justified.
+  The gap they would close is paraphrase questions ("how do I set an expiry" missed `max_age`).
+- **The model is optional.** With none configured the app returns matching code, which is the evidence
+  an answer would cite: free to host, and nothing to hallucinate. Any OpenAI-compatible endpoint works
+  (tested against Gemini and a stub server; Ollama, Groq and OpenAI use the same interface).
+- **Citations are three-valued** (`exact`, `inside`, `unsupported`) after a real model was seen citing
+  invented line numbers inside a large excerpt.
+- Transient 429/5xx responses are retried; the free tier returned 503 roughly one call in three.
+
+**Not done:** whether the prose is correct is still unmeasured; only citation placement is checked.
 
 ### M6: One integration (week 12, ~15-25 h)
 CLI or MCP server, reading the same report JSON.
