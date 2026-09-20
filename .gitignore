@@ -17,3 +17,7 @@ Thumbs.db
 .env.*
 !.env.example
 data/
+
+# Evaluation clone cache
+eval/clones/
+eval/results.local.json
