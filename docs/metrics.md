@@ -228,3 +228,30 @@ verified by opening the files. A finding is a prompt to look, not a verdict.
   per dependency, so the cycle can be followed in the code.
 
 Findings are capped at 50 per kind, most significant first; the report says how many were left out.
+
+## Question answering (M5)
+Answers must be checkable, so the retrieval step is the product and the language model is optional.
+
+**Chunks.** Python files are split by symbol: every top-level function and class becomes one chunk,
+with its line range; a class larger than 200 lines is split into its methods instead. Code outside
+any symbol (imports, module-level constants) becomes one chunk per file, capped at 200 lines.
+Non-Python text files are split into 100-line windows. Test files and generated files are indexed
+too, but ranked lower. Every chunk keeps its path and exact line range, so a citation can be checked.
+
+**Search.** Postgres full-text search over chunk text, with the query also matched against symbol
+names and paths. The score combines:
+
+| Part | Weight | Why |
+|---|---:|---|
+| text match (`ts_rank_cd`, normalized) | 1.0 | the main signal |
+| exact symbol-name match | +0.5 | "where is `send_static_file`" should find the definition |
+| path match | +0.3 | "the cli module" should find `cli.py` |
+| reading-order score of the file | +0.2 | prefer central files when several match |
+| test or generated file | -0.3 | usually not the answer |
+
+The top 8 chunks are returned, at most 3 from one file, so an answer draws on several places.
+
+**Answers.** When a language model is configured, it receives only those chunks and must answer from
+them, citing `path:line`. Every citation is then checked against the chunks that were actually
+retrieved: a citation outside them is shown as unverified. Without a model configured, the search
+results are shown on their own, which is the same evidence without the prose.
