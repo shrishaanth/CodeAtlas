@@ -1,5 +1,8 @@
-# ---- Build stage: compile and run the tests on Linux --------------------------------
-# Running the tests here also proves the Tree-sitter native library loads on Linux.
+# ---- Build stage: compile --------------------------------------------------------------
+# The tests are NOT run here: they use Testcontainers, so they need a Docker daemon inside the
+# build, which makes the image build slow and dependent on the builder's setup. CI runs the same
+# "mvn verify" on Linux (.github/workflows/ci.yml), which is what proves the Tree-sitter native
+# library loads there.
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /src
 
@@ -8,7 +11,7 @@ COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
 
 COPY src ./src
-RUN mvn -B -q verify && cp target/codeatlas-backend-*.jar /app.jar
+RUN mvn -B -q package -DskipTests && cp target/codeatlas-backend-*.jar /app.jar
 
 # ---- Runtime stage -------------------------------------------------------------------
 FROM eclipse-temurin:17-jre
