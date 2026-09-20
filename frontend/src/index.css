@@ -397,6 +397,7 @@ ul.plain li {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;   /* narrow panels wrap the strip instead of scrolling it sideways */
   gap: 4px;
   border-bottom: 1px solid var(--border);
   margin-bottom: 12px;

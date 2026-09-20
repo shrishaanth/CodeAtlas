@@ -83,7 +83,7 @@ export function AskView({ report, analysisId, onSelect }: Props) {
 
       <p className="muted small">
         {modelKnown && model
-          ? `Answers are written by ${model} from the code shown below, and every citation is checked against it.`
+          ? `Answers are written by ${model} from the code shown below, and every citation is checked against it. `
           : 'No language model is configured, so this finds the places in the code that match your question. '}
         Examples:{' '}
         {EXAMPLES.map((e, i) => (

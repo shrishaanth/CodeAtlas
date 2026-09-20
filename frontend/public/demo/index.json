@@ -2,6 +2,26 @@
   {
     "name": "flask",
     "title": "pallets/flask",
-    "description": "Python web framework. 5,500+ commits over 16 years, hundreds of contributors."
+    "description": "Web framework. 5,557 commits, 837 contributors, 83 Python files. More test code than source."
+  },
+  {
+    "name": "requests",
+    "title": "psf/requests",
+    "description": "HTTP library. 6,494 commits over the longest history here, but only 37 Python files."
+  },
+  {
+    "name": "click",
+    "title": "pallets/click",
+    "description": "Command-line interface library. 3,362 commits, 90 Python files, the largest test suite of the five."
+  },
+  {
+    "name": "starlette",
+    "title": "encode/starlette",
+    "description": "ASGI framework. 1,740 commits, 84 Python files, and an import cycle the report picks out."
+  },
+  {
+    "name": "itsdangerous",
+    "title": "pallets/itsdangerous",
+    "description": "Signing library. 677 commits, 15 Python files: small enough to read the whole report."
   }
 ]

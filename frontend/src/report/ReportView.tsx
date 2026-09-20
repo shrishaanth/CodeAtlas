@@ -1,4 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { ArchitectureView } from './ArchitectureView'
 import { AskView } from './AskView'
 import { CouplingView } from './CouplingView'
@@ -31,7 +32,11 @@ type Tab = (typeof TABS)[number]['id']
 /** Renders a report. Knows nothing about where it came from (static demo file or live API). */
 export function ReportView({ report, analysisId = null }: { report: Report; analysisId?: string | null }) {
   const index = useMemo(() => indexReport(report), [report])
-  const [tab, setTab] = useState<Tab>('reading')
+  // The open tab lives in the URL, so a tab can be linked to and survives a reload.
+  const [params, setParams] = useSearchParams()
+  const asked = params.get('tab')
+  const tab: Tab = (TABS.some((t) => t.id === asked) ? asked : 'reading') as Tab
+  const setTab = (next: Tab) => setParams(next === 'reading' ? {} : { tab: next }, { replace: true })
   const [selected, setSelected] = useState<string | null>(report.readingOrder[0]?.path ?? null)
   const isGitHub = report.repo.source.startsWith('https://github.com/')
 

@@ -5,9 +5,49 @@ start reading, who owns what, which files change together, hotspots and concrete
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
 number can be traced back to a file, line or commit. An LLM is optional and only used for Q&A.
 
-> **Status:** early development. Milestones M1-M5 of [PLAN.md](PLAN.md) are done. The reading order and
-> the question-answering search have both been measured, which is how their current behaviour was
-> chosen: see [docs/evaluation.md](docs/evaluation.md), including where they only tie simple baselines.
+> **Status:** milestones M1-M5 of [PLAN.md](PLAN.md) are done. The reading order and the
+> question-answering search have both been measured, which is how their current behaviour was chosen:
+> see [docs/evaluation.md](docs/evaluation.md), including where they only tie simple baselines.
+
+![Reading order for pallets/flask](docs/screenshots/reading.png)
+
+*Reading order for [pallets/flask](https://github.com/pallets/flask): 5,557 commits and 236 files
+reduced to "read these first, and here is why".*
+
+### Ask, with every citation checked
+
+![Asking a question about itsdangerous](docs/screenshots/ask.png)
+
+The model sees only the retrieved excerpts. Each citation it writes is then checked against them and
+labelled *exact*, *inside an excerpt* or *unsupported*, so a confident-sounding wrong line number is
+visible rather than hidden. Here it also says plainly that the excerpts do not contain
+`Serializer.load`, which is the behaviour the prompt asks for.
+
+<details>
+<summary>More of the report (findings, ownership, architecture, graph)</summary>
+
+**Findings** — each with the file and line evidence behind it, linked to GitHub:
+
+![Findings](docs/screenshots/findings.png)
+
+**Ownership** — who last changed each current line, bus factor per directory, single-owner flags:
+
+![Ownership](docs/screenshots/ownership.png)
+
+**Architecture** — directories stacked in layers by import direction, cycles marked:
+
+![Architecture](docs/screenshots/architecture.png)
+
+**Import graph** — grouped by directory, with optional co-change links:
+
+![Import graph](docs/screenshots/graph.png)
+
+**Change coupling** and **hotspots**:
+
+![Change coupling](docs/screenshots/coupling.png)
+![Hotspots](docs/screenshots/hotspots.png)
+
+</details>
 
 ## What it produces today
 - **Overview:** commits, contributors, files, lines of code, languages, test-file ratio, history span.
@@ -124,9 +164,15 @@ cases on two repositories. Method, per-repository numbers and limits:
 |---|---|
 | `backend/` | Spring Boot service: analysis engine, evaluation harness and API |
 | `frontend/` | React + TypeScript + Vite UI |
-| `docs/` | Report schema and design docs |
+| `docs/` | [Architecture](docs/architecture.md), [metrics](docs/metrics.md), [evaluation](docs/evaluation.md), [report schema](docs/report-schema.md) |
 | `eval/` | Evaluation inputs and results |
 | `spikes/` | Throwaway experiments and their measured results |
+
+## How it is built
+
+[docs/architecture.md](docs/architecture.md) covers the pipeline, the storage choices and why the
+analysis engine has no Spring in it (so the same code runs the web service, the offline CLI and the
+evaluation harness). What every number means is in [docs/metrics.md](docs/metrics.md).
 
 ## Tech stack
 Java 17, Spring Boot 4, Tree-sitter (JNI binding), JGit, PostgreSQL, React, TypeScript, Vite, Cytoscape.js,
