@@ -7,6 +7,8 @@ services:
     name: codeatlas-api
     runtime: docker
     plan: free
+    # The database below MUST be in this same region: services reach a Render database over an
+    # internal hostname that does not resolve across regions.
     region: frankfurt          # pick the region closest to you
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -37,5 +39,6 @@ services:
 databases:
   - name: codeatlas-db
     plan: free
+    region: frankfurt          # must match the web service's region, see above
     databaseName: codeatlas
     user: codeatlas
