@@ -53,12 +53,15 @@ public final class ChunkSearch {
         scored.sort(Comparator.comparingDouble(Result::score).reversed()
                 .thenComparing(r -> r.chunk().location()));
 
-        // Spread the answer over several files instead of one long one.
+        // Spread the answer over several files instead of one long one. A chunk whose symbol the
+        // question names outright is exempt: "where is save_session defined" must not lose the
+        // definition because three other methods of the same file matched first.
         Map<String, Integer> perFile = new HashMap<>();
         List<Result> out = new ArrayList<>();
         for (Result r : scored) {
+            boolean definitional = symbolMatches(r.chunk().symbol(), terms);
             int used = perFile.getOrDefault(r.chunk().path(), 0);
-            if (used >= MAX_PER_FILE) continue;
+            if (!definitional && used >= MAX_PER_FILE) continue;
             perFile.put(r.chunk().path(), used + 1);
             out.add(r);
             if (out.size() == limit) break;

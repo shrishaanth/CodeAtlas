@@ -61,14 +61,20 @@ public class ChunkRepository {
     public List<Match> search(UUID analysisId, List<String> terms, int limit) {
         String query = tsQuery(terms);
         if (query.isEmpty()) return List.of();
+        // A chunk whose symbol the question names is fetched first, whatever its text score: in a large
+        // repository the definition would otherwise fall outside this limit and never reach the ranking.
+        List<String> names = terms.stream().map(t -> t.toLowerCase(java.util.Locale.ROOT)).distinct().toList();
         return jdbc.sql("""
                         SELECT path, start_line, end_line, kind, symbol, is_test, is_generated, file_score, body,
                                ts_rank_cd(tsv, q) AS text_score
                         FROM chunk, to_tsquery('simple', :query) q
                         WHERE analysis_id = :id AND tsv @@ q
-                        ORDER BY text_score DESC
+                        ORDER BY (symbol IS NOT NULL
+                                  AND (lower(symbol) IN (:names)
+                                       OR lower(split_part(symbol, '.', -1)) IN (:names))) DESC,
+                                 text_score DESC
                         LIMIT :limit""")
-                .param("id", analysisId).param("query", query).param("limit", limit)
+                .param("id", analysisId).param("query", query).param("names", names).param("limit", limit)
                 .query(MATCH).list();
     }
 
