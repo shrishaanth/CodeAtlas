@@ -98,7 +98,7 @@ public final class EvalCommand {
         Map<String, String> cache = new LinkedHashMap<>();
         try (FetchedRepo repo = new RepoFetcher(cloneDir, 600).fetch(new RepoSource.Local(bare))) {
             report = new AnalysisPipeline(AnalysisPipeline.Options.defaults(), "eval", Clock.systemUTC())
-                    .run(repo, ProgressListener.NONE);
+                    .run(repo, ProgressListener.NONE).report();
             // A second history walk: the pipeline keeps its own, but the report does not carry commits.
             history = new HistoryMiner(AnalysisPipeline.Options.defaults().maxCommits())
                     .mine(repo.repository(), repo.head(),

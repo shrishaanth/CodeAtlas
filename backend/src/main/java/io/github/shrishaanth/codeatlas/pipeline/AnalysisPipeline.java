@@ -16,6 +16,8 @@ import io.github.shrishaanth.codeatlas.gitmine.HistoryMiner;
 import io.github.shrishaanth.codeatlas.gitmine.IdentityResolver;
 import io.github.shrishaanth.codeatlas.gitmine.Mailmap;
 import io.github.shrishaanth.codeatlas.gitmine.People;
+import io.github.shrishaanth.codeatlas.index.Chunker;
+import io.github.shrishaanth.codeatlas.index.CodeChunk;
 import io.github.shrishaanth.codeatlas.parse.ImportResolver;
 import io.github.shrishaanth.codeatlas.parse.ParsedPythonFile;
 import io.github.shrishaanth.codeatlas.parse.PythonParser;
@@ -51,6 +53,13 @@ public class AnalysisPipeline {
         }
     }
 
+    /** Chunks are only kept for the newest analyses, so this cap only protects memory on huge repos. */
+    public static final int MAX_CHUNKS = 50_000;
+
+    /** @param chunks retrievable pieces of the code, for question answering */
+    public record Result(Report report, List<CodeChunk> chunks) {
+    }
+
     private final Options options;
     private final String toolVersion;
     private final Clock clock;
@@ -61,7 +70,7 @@ public class AnalysisPipeline {
         this.clock = clock;
     }
 
-    public Report run(FetchedRepo repo, ProgressListener progress) throws IOException {
+    public Result run(FetchedRepo repo, ProgressListener progress) throws IOException {
         try {
             return runStages(repo, progress);
         } catch (InterruptedException e) {
@@ -70,7 +79,7 @@ public class AnalysisPipeline {
         }
     }
 
-    private Report runStages(FetchedRepo repo, ProgressListener progress) throws IOException, InterruptedException {
+    private Result runStages(FetchedRepo repo, ProgressListener progress) throws IOException, InterruptedException {
         Repository git = repo.repository();
 
         // 1. Inventory ---------------------------------------------------------------
@@ -182,8 +191,29 @@ public class AnalysisPipeline {
                 coupling,
                 hotspots,
                 findings.findings());
+        progress.onProgress("chunks", 99, "Indexing code for search");
+        List<CodeChunk> chunks = chunks(files, parsed, readingOrder, path -> pythonText.computeIfAbsent(path,
+                p -> readQuietly(git, byPath.get(p))));
+
         progress.onProgress("done", 100, "Analysis complete");
-        return report;
+        return new Result(report, chunks);
+    }
+
+    /** Splits every readable text file into citable chunks (docs/metrics.md, "Question answering"). */
+    private static List<CodeChunk> chunks(List<SourceFile> files, Map<String, ParsedPythonFile> parsed,
+                                          List<Report.ReadingItem> readingOrder,
+                                          java.util.function.Function<String, String> text) {
+        Map<String, Double> fileScore = new HashMap<>();
+        readingOrder.forEach(item -> fileScore.put(item.path(), item.score()));
+        List<CodeChunk> out = new ArrayList<>();
+        for (SourceFile f : files) {
+            if (f.binary() || f.skipReason() != null || f.language() == null) continue;
+            String content = text.apply(f.path());
+            if (content.isEmpty()) continue;
+            out.addAll(Chunker.chunk(f, content, parsed.get(f.path()), fileScore.getOrDefault(f.path(), 0.0)));
+            if (out.size() >= MAX_CHUNKS) break;
+        }
+        return out;
     }
 
     private int countCommits(Repository git, RevCommit head) throws IOException {

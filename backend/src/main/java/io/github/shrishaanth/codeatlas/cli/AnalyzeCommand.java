@@ -40,7 +40,7 @@ public final class AnalyzeCommand {
             long fetched = System.nanoTime();
             System.err.printf("fetched in %.1f s%n", (fetched - t0) / 1e9);
             report = new AnalysisPipeline(AnalysisPipeline.Options.defaults(), "cli", Clock.systemUTC()).run(repo,
-                    (stage, pct, detail) -> System.err.printf("[%3d%%] %-9s %s%n", pct, stage, detail));
+                    (stage, pct, detail) -> System.err.printf("[%3d%%] %-9s %s%n", pct, stage, detail)).report();
         } finally {
             Files.deleteIfExists(workDir);
         }

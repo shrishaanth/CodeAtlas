@@ -49,8 +49,11 @@ class AnalysisPipelineTest {
             Clock clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
             Report report;
             try (FetchedRepo fetched = new RepoFetcher(dir, 30).fetch(new RepoSource.Local(dir))) {
-                report = new AnalysisPipeline(new AnalysisPipeline.Options(1000, 100, 2), "test", clock).run(fetched,
-                        (stage, pct, detail) -> stages.add(stage));
+                AnalysisPipeline.Result result = new AnalysisPipeline(new AnalysisPipeline.Options(1000, 100, 2),
+                        "test", clock).run(fetched, (stage, pct, detail) -> stages.add(stage));
+                report = result.report();
+                assertThat(result.chunks()).extracting(c -> c.path() + ":" + c.startLine())
+                        .contains("app/models.py:1", "app/views.py:1", "README.md:1");
             }
 
             assertThat(stages).startsWith("inventory").endsWith("done").contains("parse", "history", "analyze");
@@ -102,7 +105,8 @@ class AnalysisPipelineTest {
                     "Makefile", "all:\n\techo hi\n"));
             Report report;
             try (FetchedRepo fetched = new RepoFetcher(dir, 30).fetch(new RepoSource.Local(dir))) {
-                report = new AnalysisPipeline(new AnalysisPipeline.Options(1000, 100, 2), "test", Clock.systemUTC()).run(fetched, ProgressListener.NONE);
+                report = new AnalysisPipeline(new AnalysisPipeline.Options(1000, 100, 2), "test", Clock.systemUTC())
+                        .run(fetched, ProgressListener.NONE).report();
             }
 
             JsonNode json = JsonMapper.builder().build().readTree(JsonMapper.builder().build().writeValueAsString(report));
