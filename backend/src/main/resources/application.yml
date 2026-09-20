@@ -23,6 +23,16 @@ codeatlas:
     clone-timeout-seconds: ${CODEATLAS_CLONE_TIMEOUT_SECONDS:120}
     max-queued: ${CODEATLAS_MAX_QUEUED:20}
     max-blame-files: ${CODEATLAS_MAX_BLAME_FILES:3000}
+  qa:
+    # Leave the model unset to run without a language model: questions then return matching code only.
+    # Ollama locally: base-url http://localhost:11434/v1, model qwen2.5-coder:7b, no key needed.
+    base-url: ${CODEATLAS_QA_BASE_URL:http://localhost:11434/v1}
+    api-key: ${CODEATLAS_QA_API_KEY:}
+    model: ${CODEATLAS_QA_MODEL:}
+    max-tokens: ${CODEATLAS_QA_MAX_TOKENS:600}
+    timeout-seconds: ${CODEATLAS_QA_TIMEOUT_SECONDS:60}
+    max-context-chars: ${CODEATLAS_QA_MAX_CONTEXT_CHARS:12000}
+    max-questions-per-hour: ${CODEATLAS_QA_MAX_QUESTIONS_PER_HOUR:30}
     # 0 means one per CPU
     threads: ${CODEATLAS_THREADS:0}
 

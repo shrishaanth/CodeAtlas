@@ -10,12 +10,13 @@ import java.util.List;
  * variable (e.g. {@code CODEATLAS_CORS_ALLOWED_ORIGINS}), so nothing is hardcoded per environment.
  */
 @ConfigurationProperties(prefix = "codeatlas")
-public record CodeAtlasProperties(String version, Cors cors, Analysis analysis) {
+public record CodeAtlasProperties(String version, Cors cors, Analysis analysis, Qa qa) {
 
     public CodeAtlasProperties {
         if (version == null || version.isBlank()) version = "dev";
         if (cors == null) cors = new Cors(List.of());
         if (analysis == null) analysis = new Analysis(null, false, 0, 0, 0, 0, 0);
+        if (qa == null) qa = new Qa(null, null, null, 0, 0, 0, 0);
     }
 
     public record Cors(List<String> allowedOrigins) {
@@ -42,6 +43,26 @@ public record CodeAtlasProperties(String version, Cors cors, Analysis analysis) 
             if (maxQueued <= 0) maxQueued = 20;
             if (maxBlameFiles <= 0) maxBlameFiles = 3_000;
             if (threads <= 0) threads = Runtime.getRuntime().availableProcessors();
+        }
+    }
+
+    /**
+     * Question answering. Leave {@code model} unset and the application runs without a language
+     * model: questions then return the matching code, which is the evidence an answer would cite.
+     *
+     * @param baseUrl             an OpenAI-compatible endpoint, e.g. http://localhost:11434/v1 for Ollama
+     * @param apiKey              may be empty for a local model
+     * @param maxContextChars     how much code is put in front of the model
+     * @param maxQuestionsPerHour per caller; 0 disables the limit
+     */
+    public record Qa(String baseUrl, String apiKey, String model, int maxTokens, int timeoutSeconds,
+                     int maxContextChars, int maxQuestionsPerHour) {
+        public Qa {
+            if (baseUrl == null || baseUrl.isBlank()) baseUrl = "http://localhost:11434/v1";
+            if (maxTokens <= 0) maxTokens = 600;
+            if (timeoutSeconds <= 0) timeoutSeconds = 60;
+            if (maxContextChars <= 0) maxContextChars = 12_000;
+            if (maxQuestionsPerHour < 0) maxQuestionsPerHour = 0;
         }
     }
 }

@@ -4,6 +4,7 @@ import io.github.shrishaanth.codeatlas.config.CodeAtlasProperties;
 import io.github.shrishaanth.codeatlas.fetch.FetchedRepo;
 import io.github.shrishaanth.codeatlas.fetch.RepoFetcher;
 import io.github.shrishaanth.codeatlas.fetch.RepoSource;
+import io.github.shrishaanth.codeatlas.index.ChunkRepository;
 import io.github.shrishaanth.codeatlas.pipeline.AnalysisPipeline;
 import io.github.shrishaanth.codeatlas.pipeline.ProgressListener;
 import io.github.shrishaanth.codeatlas.report.Report;
@@ -36,15 +37,20 @@ public class AnalysisService {
     private static final long PROGRESS_WRITE_INTERVAL_MS = 500;
 
     private final AnalysisRepository repository;
+    private final ChunkRepository chunks;
     private final CodeAtlasProperties.Analysis config;
     private final String toolVersion;
     private final JsonMapper jsonMapper;
     private final Clock clock;
     private final ExecutorService executor;
 
-    public AnalysisService(AnalysisRepository repository, CodeAtlasProperties properties, JsonMapper jsonMapper,
-                           Clock clock) {
+    /** Chunks are kept only for the newest analyses: they hold the repository's code. */
+    private static final int KEEP_INDEXED_ANALYSES = 20;
+
+    public AnalysisService(AnalysisRepository repository, ChunkRepository chunks, CodeAtlasProperties properties,
+                           JsonMapper jsonMapper, Clock clock) {
         this.repository = repository;
+        this.chunks = chunks;
         this.config = properties.analysis();
         this.toolVersion = properties.version();
         this.jsonMapper = jsonMapper;
@@ -109,12 +115,16 @@ public class AnalysisService {
         repository.markRunning(id, clock.instant());
         long t0 = System.nanoTime();
         try (FetchedRepo repo = new RepoFetcher(config.workDir(), config.cloneTimeoutSeconds()).fetch(source)) {
-            Report report = new AnalysisPipeline(
+            AnalysisPipeline.Result result = new AnalysisPipeline(
                     new AnalysisPipeline.Options(config.maxCommits(), config.maxBlameFiles(), config.threads()),
                     toolVersion, clock)
                     .run(repo, throttled(id));
+            Report report = result.report();
             repository.markDone(id, report.repo().name(), report.repo().commit(),
                     jsonMapper.writeValueAsString(report), clock.instant());
+            chunks.save(id, result.chunks());
+            int removed = chunks.deleteOlderThan(KEEP_INDEXED_ANALYSES);
+            if (removed > 0) log.info("Removed {} chunks of older analyses", removed);
             log.info("Analysis {} of {} done in {} ms", id, source.display(), (System.nanoTime() - t0) / 1_000_000);
         } catch (Exception | OutOfMemoryError e) {
             log.warn("Analysis {} of {} failed", id, source.display(), e);

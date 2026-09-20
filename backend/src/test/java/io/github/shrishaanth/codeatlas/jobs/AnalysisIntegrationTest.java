@@ -1,5 +1,8 @@
 package io.github.shrishaanth.codeatlas.jobs;
 
+import io.github.shrishaanth.codeatlas.index.ChunkRepository;
+import io.github.shrishaanth.codeatlas.qa.Answer;
+import io.github.shrishaanth.codeatlas.qa.QaService;
 import io.github.shrishaanth.codeatlas.testutil.TestRepo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -44,6 +47,12 @@ class AnalysisIntegrationTest {
     @Autowired
     private JsonMapper jsonMapper;
 
+    @Autowired
+    private QaService qa;
+
+    @Autowired
+    private ChunkRepository chunkRepository;
+
     @Test
     void analyzesALocalRepositoryAndStoresTheReportVerbatim(@TempDir Path dir) throws Exception {
         try (TestRepo repo = TestRepo.create(dir)) {
@@ -70,6 +79,51 @@ class AnalysisIntegrationTest {
             assertThat(report.get("edges").get(0).get("source").asString()).isEqualTo("pkg/app.py");
             assertThat(report.get("readingOrder").get(0).get("path").asString()).isEqualTo("pkg/core.py");
             assertThat(service.recent(5)).extracting(AnalysisStatus::id).contains(submitted.id());
+        }
+    }
+
+    @Test
+    void indexesCodeSoQuestionsFindItWithoutAModel(@TempDir Path dir) throws Exception {
+        try (TestRepo repo = TestRepo.create(dir)) {
+            repo.commit("alice@x.org", "init", Map.of(
+                    "pkg/__init__.py", "",
+                    "pkg/tmdb.py", """
+                            import requests
+
+
+                            def fetch_movie(movie_id):
+                                \"""Fetch one movie from the TMDB API.\"""
+                                response = requests.get(f"https://api.themoviedb.org/3/movie/{movie_id}")
+                                return response.json()
+                            """,
+                    "pkg/cli.py", """
+                            \"""Command line.\"""
+                            from pkg.tmdb import fetch_movie
+
+
+                            def main():
+                                print(fetch_movie(1))
+                            """));
+
+            AnalysisStatus done = waitForFinish(service.submit(dir.toString()).id());
+            assertThat(done.status()).as(String.valueOf(done.error())).isEqualTo(AnalysisStatus.State.DONE);
+            assertThat(chunkRepository.countFor(done.id())).isPositive();
+
+            var hits = qa.search(done.id(), "where is fetch_movie defined", 5);
+            assertThat(hits).isNotEmpty();
+            assertThat(hits.get(0).chunk().path()).isEqualTo("pkg/tmdb.py");
+            assertThat(hits.get(0).chunk().symbol()).isEqualTo("fetch_movie");
+            assertThat(hits.get(0).chunk().text()).contains("themoviedb.org");
+
+            Answer answer = qa.ask(done.id(), "where is fetch_movie defined", "1.2.3.4");
+            assertThat(qa.modelConfigured()).as("no model in tests").isFalse();
+            assertThat(answer.answer()).isNull();
+            assertThat(answer.note()).contains("No language model is configured");
+            assertThat(answer.sources()).extracting(Answer.Source::path).contains("pkg/tmdb.py");
+
+            Answer nothing = qa.ask(done.id(), "zzzznotinrepository", "1.2.3.4");
+            assertThat(nothing.sources()).isEmpty();
+            assertThat(nothing.note()).contains("Nothing in this repository matched");
         }
     }
 

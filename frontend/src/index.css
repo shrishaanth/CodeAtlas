@@ -787,3 +787,36 @@ ul.findings {
 .layer-box .pill {
   margin-left: 6px;
 }
+
+/* ---- Ask ---------------------------------------------------------------------------- */
+
+.answer {
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+}
+
+ul.sources {
+  display: grid;
+  gap: 12px;
+}
+
+.source-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+pre.code {
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.45;
+  max-height: 320px;
+}

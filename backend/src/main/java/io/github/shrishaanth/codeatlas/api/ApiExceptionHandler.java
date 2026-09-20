@@ -19,4 +19,9 @@ public class ApiExceptionHandler {
     public ProblemDetail busy(AnalysisService.QueueFullException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage());
     }
+
+    @ExceptionHandler(io.github.shrishaanth.codeatlas.qa.QaService.TooManyQuestionsException.class)
+    public ProblemDetail tooManyQuestions(io.github.shrishaanth.codeatlas.qa.QaService.TooManyQuestionsException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
+    }
 }

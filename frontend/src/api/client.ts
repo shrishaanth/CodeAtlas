@@ -78,3 +78,48 @@ export function getRecentAnalyses(signal?: AbortSignal): Promise<AnalysisStatus[
 export function getReport(id: string, signal?: AbortSignal): Promise<Report> {
   return request(`/api/analyses/${encodeURIComponent(id)}/report`, { signal })
 }
+
+export interface QaStatus {
+  modelConfigured: boolean
+  model: string | null
+}
+
+export interface AnswerSource {
+  path: string
+  startLine: number
+  endLine: number
+  kind: string
+  symbol: string | null
+  text: string
+  score: number
+}
+
+export interface AnswerCitation {
+  path: string
+  startLine: number
+  endLine: number | null
+  /** false means the cited lines were not among the code the model was given */
+  verified: boolean
+}
+
+export interface Answer {
+  question: string
+  answer: string | null
+  model: string | null
+  note: string | null
+  citations: AnswerCitation[]
+  sources: AnswerSource[]
+}
+
+export function getQaStatus(signal?: AbortSignal): Promise<QaStatus> {
+  return request('/api/qa/status', { signal })
+}
+
+export function askQuestion(analysisId: string, question: string, signal?: AbortSignal): Promise<Answer> {
+  return request(`/api/analyses/${encodeURIComponent(analysisId)}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+    signal,
+  })
+}

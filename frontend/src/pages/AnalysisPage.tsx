@@ -45,7 +45,7 @@ export function AnalysisPage() {
   }, [id])
 
   if (error) return <Message kind="error" text={error} />
-  if (report) return <ReportView report={report} />
+  if (report) return <ReportView report={report} analysisId={id} />
   if (!status) return <p className="muted">Loading…</p>
   if (status.status === 'FAILED') {
     return <Message kind="error" text={`The analysis failed: ${status.error ?? 'unknown error'}`} />

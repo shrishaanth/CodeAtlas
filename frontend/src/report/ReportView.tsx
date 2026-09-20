@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { ArchitectureView } from './ArchitectureView'
+import { AskView } from './AskView'
 import { CouplingView } from './CouplingView'
 import { FileDetails } from './FileDetails'
 import { FindingsView } from './FindingsView'
@@ -15,6 +16,7 @@ import type { Report } from './types'
 const ImportGraphView = lazy(() => import('./ImportGraphView').then((m) => ({ default: m.ImportGraphView })))
 
 const TABS = [
+  { id: 'ask', label: 'Ask' },
   { id: 'reading', label: 'Reading order' },
   { id: 'findings', label: 'Findings' },
   { id: 'architecture', label: 'Architecture' },
@@ -27,7 +29,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]['id']
 
 /** Renders a report. Knows nothing about where it came from (static demo file or live API). */
-export function ReportView({ report }: { report: Report }) {
+export function ReportView({ report, analysisId = null }: { report: Report; analysisId?: string | null }) {
   const index = useMemo(() => indexReport(report), [report])
   const [tab, setTab] = useState<Tab>('reading')
   const [selected, setSelected] = useState<string | null>(report.readingOrder[0]?.path ?? null)
@@ -77,6 +79,7 @@ export function ReportView({ report }: { report: Report }) {
               </button>
             ))}
           </div>
+          {tab === 'ask' && <AskView report={report} analysisId={analysisId} onSelect={setSelected} />}
           {tab === 'reading' && (
             <ReadingOrderList items={report.readingOrder} selected={selected} onSelect={setSelected} />
           )}
