@@ -10,13 +10,15 @@ measures could not be chosen to flatter the tool. Everything here is reproducibl
 
 ### Reading order
 The reading order ranks the Python files a newcomer should read first
-([docs/metrics.md](metrics.md#reading-order-v1)). It is compared with two independent answers.
+([docs/metrics.md](metrics.md#reading-order-v2)). It is compared with two independent answers.
 
-**1. Files the project's own documentation points at.** Path-like mentions (`src/flask/app.py`,
-`cli.py`) are collected from README, CONTRIBUTING, architecture, development, design and internals
-files, plus the same names under `docs/`. A mention counts only if exactly one ranked file matches it,
-so ambiguous names such as `utils.py` are dropped. Changelogs are excluded: they mention files
-because they changed, not because they matter.
+**1. Files the project's own documentation points at.** Mentions are collected from README,
+CONTRIBUTING, architecture, development, design and internals files, plus every prose page under
+`docs/`. Both forms are matched: paths (`src/flask/app.py`, `cli.py`) and dotted module names as
+Python docs write them (`flask.cli`, `:mod:`flask.app``). A mention counts only if exactly one ranked
+file matches it, so ambiguous names such as `utils.py` are dropped. Changelogs and API reference
+pages are excluded: the first mentions files because they changed, the second lists every module.
+A repository needs at least 3 mentioned files to take part in this comparison.
 
 **2. Files newcomers actually started with.** For every person in the history, the files touched in
 their *first* commit. Commits touching more than 20 files are skipped (an import of an existing

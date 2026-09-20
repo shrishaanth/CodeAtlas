@@ -5,14 +5,15 @@ start reading, who owns what, which files change together, hotspots and concrete
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
 number can be traced back to a file, line or commit. An LLM is optional and only used for Q&A.
 
-> **Status:** early development. Milestones M1-M3 of [PLAN.md](PLAN.md) are done: import graph, reading
-> order, ownership, change coupling, hotspots, layers and findings. Nothing is evaluated against an
-> independent source yet (M4); reading order has a known weakness described in PLAN.md.
+> **Status:** early development. Milestones M1-M4 of [PLAN.md](PLAN.md) are done. The reading order has
+> been measured against independent sources on 20 repositories, which is how its current formula was
+> chosen: see [docs/evaluation.md](docs/evaluation.md), including where it only ties simple baselines.
 
 ## What it produces today
 - **Overview:** commits, contributors, files, lines of code, languages, test-file ratio, history span.
-- **Reading order:** Python files ranked by centrality in the import graph, fan-in and churn, each with the
-  parts of its score and plain-language reasons. Definitions: [docs/metrics.md](docs/metrics.md).
+- **Reading order:** Python files ranked by churn, reach (how much of the codebase a file pulls in) and
+  fan-in, each with the parts of its score and plain-language reasons. The weights were chosen on half of
+  20 repositories and checked on the other half: [docs/evaluation.md](docs/evaluation.md).
 - **Import graph:** interactive, grouped by directory, showing what a file imports and what imports it,
   optionally with co-change links.
 - **Ownership:** who last changed each current line (git blame, whitespace ignored, `.git-blame-ignore-revs`
@@ -83,13 +84,23 @@ All settings come from environment variables.
 | `CODEATLAS_THREADS` | backend: parallel blame workers, `0` = one per CPU | `0` |
 | `VITE_API_BASE_URL` | frontend (build time) | empty, meaning same origin |
 
+## How good is it?
+
+Measured, not asserted. On 10 repositories that took no part in choosing the formula, the reading order
+places documentation-mentioned files at mean percentile **0.69**, against 0.67 for sorting by file size,
+0.67 for sorting by commit count and 0.50 for random order. The first version of the formula scored 0.66
+and lost to both baselines; measuring it is what led to replacing it. Ownership matched CODEOWNERS for the
+top owner in 6 of 16 directories, across the only 2 repositories in the set that have a CODEOWNERS file.
+Method, per-repository numbers and limits: [docs/evaluation.md](docs/evaluation.md).
+
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| `backend/` | Spring Boot service: analysis engine and API |
+| `backend/` | Spring Boot service: analysis engine, evaluation harness and API |
 | `frontend/` | React + TypeScript + Vite UI |
 | `docs/` | Report schema and design docs |
+| `eval/` | Evaluation inputs and results |
 | `spikes/` | Throwaway experiments and their measured results |
 
 ## Tech stack

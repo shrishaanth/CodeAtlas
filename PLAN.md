@@ -64,19 +64,20 @@ confidence), hotspots. Basic author alias merging.
 Duplicate modules, unreferenced files, missing tests, committed generated files, repeated logic.
 Overview page, ownership views, JSON export, background job runner with progress.
 
-### M4: Evaluation harness (weeks 8-9, ~25-35 h)  -- do not cut
+### M4: Evaluation harness (weeks 8-9, ~25-35 h) -- DONE 2026-09-20
 Run on ~20 Python repos. Compare reading order and ownership against independent sources
 (contributor docs, CODEOWNERS, maintainers list). Report results honestly, including failures, in `docs/evaluation.md`.
 Also compare against a baseline (e.g. rank by file size or plain import count) so the claim is measured.
 
-**Known issue to test first (seen in M1 on 3 of 3 repos):** reading order v1 puts low-level files that
-everything imports at the top: `_compat.py` and `_winconsole.py` in click, `exc.py` in itsdangerous,
-`globals.py` in flask. A newcomer would rather start with the core concepts (`core.py`, `serializer.py`,
-`app.py`). PageRank passes importance down to whatever central files import, which favours foundations.
-Ideas to evaluate against baselines, not to adopt on a hunch: lower the centrality weight, penalise
-private `_module.py` files, use reverse PageRank (files that *use* much of the codebase), or order by
-dependency layers instead of a single score. Also check the 5-line candidate threshold and whether
-`examples/` should be ranked with library code.
+**Outcome.** The known issue was confirmed and fixed by measurement, not by guessing:
+- v1 was no better than sorting by file size and worse than sorting by commit count.
+- A weight search on 10 repositories, checked on 10 held-out ones, produced v2:
+  `0.55 * churn + 0.30 * reach + 0.15 * fanIn - 0.20 for private modules`. Ordinary PageRank
+  centrality got zero weight in every good variant and was removed.
+- v2 beats every baseline on the documentation measure on held-out repositories (0.694 vs 0.671 for
+  size), and the low-level shims no longer top the list. The margin over "sort by commit count" is small.
+- Still unevaluated: findings, change coupling, hotspots, and the 5-line candidate threshold.
+  `docs/conf.py` and other non-product Python files are still ranked.
 
 ### M5: Q&A, optional (weeks 10-11, ~30-40 h)
 Chunk code, keyword index plus embeddings, retrieval, LLM answer with `path:line` citations and shown source code.
