@@ -12,7 +12,11 @@ For a recruiter or an interviewer who will watch without sound as often as with 
 | 0:40–0:52 | Findings tab; open the import-cycle finding | "Findings are concrete and come with evidence: this import cycle lists the exact three imports that close it, each linked to the line on GitHub." |
 | 0:52–1:02 | Ownership tab; point at a bus-factor-1 row | "Ownership comes from git blame with whitespace ignored, and one person's several email addresses merged. Bus factor one means one person holds most of that directory." |
 | 1:02–1:20 | Ask tab; ask "How does a signed value get verified when it is loaded?"; point at the citation line | "And you can ask questions. The model only ever sees the retrieved excerpts, and every line number it cites is checked against them — exact, inside an excerpt, or unsupported. Here it says outright that the code it would need is not in the excerpts, instead of inventing it." |
-| 1:20–1:25 | Scroll to the matched code, then the URL bar | "Live at the link below. Everything you saw is computed from the code and the history, so every number traces back to a file, a line or a commit." |
+| 1:20–1:25 | Scroll to the matched code, then the URL bar showing code-atlas-app.vercel.app | "Live at code-atlas-app.vercel.app. Everything you saw is computed from the code and the history, so every number traces back to a file, a line or a commit." |
+
+The deployed API sleeps after 15 minutes idle, so open
+<https://codeatlas-api-w5qr.onrender.com/api/info> a minute before recording to wake it; otherwise the
+first analysis sits at "Waiting to start" for most of a minute.
 
 Fallback if the deployed backend is asleep: open a demo report instead
 (`/demo/flask`), and say the analysis was pre-computed. The Ask tab needs a live analysis, so record

@@ -116,6 +116,18 @@ Clones go to a temp directory and are deleted when the analysis ends. Accepting 
 is behind `CODEATLAS_ALLOW_LOCAL_PATHS`, off by default, because on a public server it would let a
 visitor read the server's disk.
 
+## How it is deployed
+
+The UI is a static build on Vercel; the API and one small Postgres are on Render's free tier, both in
+the same region, because Render reaches a database over an internal hostname that does not resolve
+across regions. The frontend learns the API's address at build time through `VITE_API_BASE_URL`, and
+the API allows that one origin through `CODEATLAS_CORS_ALLOWED_ORIGINS`; no key or URL is baked into
+the repository.
+
+Everything in this deployment is sized for one shared CPU and 512 MB: a single analysis worker, a
+bounded queue, caps on commits and blamed files, and a per-visitor question limit. The image build
+does not run the tests, because they need a Docker daemon for Testcontainers; CI runs them instead.
+
 ## Frontend
 
 React 19 + TypeScript + Vite. `report/ReportView.tsx` holds the tabs; each tab is one component

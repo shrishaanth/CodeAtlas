@@ -1,5 +1,8 @@
 # CodeAtlas
 
+**[Try it](https://code-atlas-app.vercel.app/)** · [How the numbers are computed](docs/metrics.md) ·
+[How well it works](docs/evaluation.md) · [How it is built](docs/architecture.md)
+
 Point CodeAtlas at a repository and it produces a browsable report: an architecture map, where to
 start reading, who owns what, which files change together, hotspots and concrete findings.
 Most of the report is computed from the code (Tree-sitter) and the git history (JGit), so every
@@ -74,6 +77,22 @@ visible rather than hidden. Here it also says plainly that the excerpts do not c
 - **JSON export** of the whole report. Format: [docs/report-schema.md](docs/report-schema.md).
 
 Pre-computed reports in `frontend/public/demo/` open without any backend.
+
+## The live site
+
+<https://code-atlas-app.vercel.app/> — the UI on Vercel, the API on Render's free tier
+(`https://codeatlas-api-w5qr.onrender.com`), one small Postgres beside it.
+
+Two things to expect there, both consequences of the free tier rather than bugs:
+
+- **The API sleeps after about 15 minutes idle**, so the first analysis you start may wait 30-60
+  seconds for the instance to wake. The five demo reports are static files served by Vercel, so they
+  open instantly whether or not the API is awake; that is what they are for.
+- **One shared CPU**, so analyses run one at a time and a large repository is slow. `itsdangerous`
+  and `click` are good ones to try; `flask` with its 5,557 commits will take a while.
+
+The deployed instance refuses local filesystem paths (`CODEATLAS_ALLOW_LOCAL_PATHS=false`) and caps
+commits, blamed files, queue length and questions per hour. See [render.yaml](render.yaml).
 
 ## Run locally
 
