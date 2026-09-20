@@ -28,6 +28,9 @@ number can be traced back to a file, line or commit. An LLM is optional and only
   name), import cycles between directories, committed build output, caches and `.env` files (never read),
   areas without tests, and modules no code imports ("no static import found", not "dead code").
 - **File details:** owners, files it usually changes with, imports, importers, definitions with GitHub links.
+- **Ask:** questions about the analyzed code. Matching code is always shown, found by symbol-aware
+  full-text search. If a language model is configured, it answers from those excerpts only, and every
+  citation is marked *exact*, *inside an excerpt* or *unsupported* so its evidence can be checked.
 - **JSON export** of the whole report. Format: [docs/report-schema.md](docs/report-schema.md).
 
 Pre-computed reports in `frontend/public/demo/` open without any backend.
@@ -82,7 +85,27 @@ All settings come from environment variables.
 | `CODEATLAS_MAX_QUEUED` | backend: waiting analyses before refusing | `20` |
 | `CODEATLAS_MAX_BLAME_FILES` | backend: files blamed per analysis, most-changed first | `3000` |
 | `CODEATLAS_THREADS` | backend: parallel blame workers, `0` = one per CPU | `0` |
+| `CODEATLAS_QA_MODEL` | backend: model for answers; **unset means no model**, and questions return matching code only | unset |
+| `CODEATLAS_QA_BASE_URL` | backend: any OpenAI-compatible endpoint (Ollama, Gemini, Groq, OpenAI) | `http://localhost:11434/v1` |
+| `CODEATLAS_QA_API_KEY` | backend: key for that endpoint; empty for a local model. Never commit it. | empty |
+| `CODEATLAS_QA_MAX_QUESTIONS_PER_HOUR` | backend: per visitor; `0` disables the limit | `30` |
 | `VITE_API_BASE_URL` | frontend (build time) | empty, meaning same origin |
+
+## Question answering
+
+Answering is optional and off by default: with no model configured, a question returns the code that
+matches it, which is the evidence an answer would cite. Any OpenAI-compatible endpoint works:
+
+```bash
+# Local and free (needs Ollama running):
+CODEATLAS_QA_BASE_URL=http://localhost:11434/v1  CODEATLAS_QA_MODEL=qwen2.5-coder:7b
+# Hosted (Gemini shown; Groq, OpenAI and OpenRouter work the same way):
+CODEATLAS_QA_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+CODEATLAS_QA_MODEL=gemini-3.8-flash  CODEATLAS_QA_API_KEY=...
+```
+
+The model only ever sees the retrieved excerpts, never the whole repository, and its citations are
+checked against them ([docs/metrics.md](docs/metrics.md#question-answering-m5)).
 
 ## How good is it?
 
