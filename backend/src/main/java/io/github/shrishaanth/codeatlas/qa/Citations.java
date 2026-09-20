@@ -32,14 +32,32 @@ public final class Citations {
             int start = Integer.parseInt(m.group(2));
             Integer end = m.group(3) == null ? null : Integer.parseInt(m.group(3));
             if (!seen.add(path + ":" + start + "-" + end)) continue;
-            boolean verified = given.stream().anyMatch(c -> c.contains(path, start))
-                    && (end == null || given.stream().anyMatch(c -> c.contains(path, end)));
-            out.add(new Answer.Citation(path, start, end, verified));
+            out.add(new Answer.Citation(path, start, end, status(path, start, end, given)));
         }
         return out;
     }
 
-    public static long unverified(List<Answer.Citation> citations) {
-        return citations.stream().filter(c -> !c.verified()).count();
+    /**
+     * How much the citation can be trusted:
+     * <ul>
+     *   <li>{@code exact}: it names an excerpt the model was given, so it points at real code.</li>
+     *   <li>{@code inside}: the lines fall within an excerpt, but not at its boundaries. The excerpt
+     *       is real, the exact lines are the model's own arithmetic and are often wrong.</li>
+     *   <li>{@code unsupported}: the lines are outside everything the model was given.</li>
+     * </ul>
+     */
+    static String status(String path, int start, Integer end, List<CodeChunk> given) {
+        for (CodeChunk c : given) {
+            if (c.path().equals(path) && c.startLine() == start && (end == null || c.endLine() == end)) {
+                return Answer.Citation.EXACT;
+            }
+        }
+        boolean inside = given.stream().anyMatch(c -> c.contains(path, start))
+                && (end == null || given.stream().anyMatch(c -> c.contains(path, end)));
+        return inside ? Answer.Citation.INSIDE : Answer.Citation.UNSUPPORTED;
+    }
+
+    public static long unsupported(List<Answer.Citation> citations) {
+        return citations.stream().filter(c -> c.status().equals(Answer.Citation.UNSUPPORTED)).count();
     }
 }

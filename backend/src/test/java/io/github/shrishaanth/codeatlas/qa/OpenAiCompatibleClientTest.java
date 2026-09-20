@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class OpenAiCompatibleClientTest {
 
     private HttpServer server;
+    private final java.util.concurrent.atomic.AtomicInteger requests = new java.util.concurrent.atomic.AtomicInteger();
 
     @AfterEach
     void stop() {
@@ -26,6 +27,7 @@ class OpenAiCompatibleClientTest {
     private String startServer(int status, String body, AtomicReference<String> captured) throws IOException {
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/chat/completions", exchange -> {
+            requests.incrementAndGet();
             captured.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8)
                     + "\nAuth: " + exchange.getRequestHeaders().getFirst("Authorization"));
             byte[] out = body.getBytes(StandardCharsets.UTF_8);
@@ -64,24 +66,54 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
-    void reportsAnUnreachableOrRefusingEndpoint() throws Exception {
+    void givesUpAfterRetryingABusyEndpoint() throws Exception {
         String url = startServer(429, "{\"error\":\"rate limited\"}", new AtomicReference<>());
         LlmClient client = new OpenAiCompatibleClient(url, null, "m", 100, Duration.ofSeconds(5));
 
         assertThatThrownBy(() -> client.complete("s", "u"))
                 .isInstanceOf(OpenAiCompatibleClient.LlmUnavailableException.class)
-                .hasMessageContaining("429");
-
-        LlmClient dead = new OpenAiCompatibleClient("http://127.0.0.1:1/v1", null, "m", 100, Duration.ofSeconds(2));
-        assertThatThrownBy(() -> dead.complete("s", "u"))
-                .isInstanceOf(OpenAiCompatibleClient.LlmUnavailableException.class);
+                .hasMessageContaining("busy").hasMessageContaining("429");
+        assertThat(requests.get()).as("retried, not given up at once").isEqualTo(OpenAiCompatibleClient.ATTEMPTS);
     }
 
     @Test
-    void reportsAReplyWithoutAMessage() throws Exception {
-        String url = startServer(200, "{\"choices\":[]}", new AtomicReference<>());
+    void retriesTransientFailuresAndSucceeds() throws Exception {
+        // Seen with Gemini's free tier: an occasional 503 that succeeds on the next attempt.
+        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            int n = requests.incrementAndGet();
+            byte[] out = (n == 1 ? "{\"error\":\"overloaded\"}"
+                    : "{\"choices\":[{\"message\":{\"content\":\"second time lucky\"}}]}")
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(n == 1 ? 503 : 200, out.length);
+            exchange.getResponseBody().write(out);
+            exchange.close();
+        });
+        server.start();
+        String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
+
+        String reply = new OpenAiCompatibleClient(url, null, "m", 100, Duration.ofSeconds(5)).complete("s", "u");
+
+        assertThat(reply).isEqualTo("second time lucky");
+        assertThat(requests.get()).isEqualTo(2);
+    }
+
+    @Test
+    void anEmptyReplyIsRetriedThenReported() throws Exception {
+        // A reasoning model can spend its whole token budget before writing anything.
+        String url = startServer(200, "{\"choices\":[{\"message\":{\"content\":\"\"},\"finish_reason\":\"length\"}]}",
+                new AtomicReference<>());
         LlmClient client = new OpenAiCompatibleClient(url, null, "m", 100, Duration.ofSeconds(5));
 
-        assertThatThrownBy(() -> client.complete("s", "u")).hasMessageContaining("no message");
+        assertThatThrownBy(() -> client.complete("s", "u"))
+                .hasMessageContaining("empty message").hasMessageContaining("length");
+    }
+
+    @Test
+    void reportsAnEndpointThatIsNotThere() {
+        LlmClient dead = new OpenAiCompatibleClient("http://127.0.0.1:1/v1", null, "m", 100, Duration.ofSeconds(2));
+
+        assertThatThrownBy(() -> dead.complete("s", "u"))
+                .isInstanceOf(OpenAiCompatibleClient.LlmUnavailableException.class);
     }
 }

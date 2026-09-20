@@ -70,6 +70,34 @@ class ChunkSearchTest {
     }
 
     @Test
+    void aWordOfTheSymbolCountsToo() {
+        // "where is the signature created" should reach Signer.get_signature, and "signing" should reach sign.
+        List<ChunkSearch.Result> results = ChunkSearch.rank(List.of(
+                match("docs/concepts.rst", null, 1.0, false, 0),
+                match("src/signer.py", "Signer.get_signature", 0.8, false, 0)),
+                "how does signing work and where is the signature created", 8);
+
+        assertThat(results.get(0).chunk().path()).isEqualTo("src/signer.py");
+        assertThat(ChunkSearch.splitWords("TimestampSigner.get_signature"))
+                .containsExactly("timestamp", "signer", "get", "signature");
+        assertThat(ChunkSearch.stem("signing")).isEqualTo("sign");
+        assertThat(ChunkSearch.stem("signed")).isEqualTo("sign");
+        assertThat(ChunkSearch.stem("sign")).isEqualTo("sign");
+        assertThat(ChunkSearch.stem("less")).as("double s is part of the word").isEqualTo("less");
+        assertThat(ChunkSearch.stem("class")).isEqualTo("class");
+    }
+
+    @Test
+    void buildsAnOrQueryThatCannotBeInjected() {
+        assertThat(ChunkRepository.tsQuery(List.of("where", "fetch_movie", "defined")))
+                .isEqualTo("where | fetch_movie | defined");
+        assertThat(ChunkRepository.tsQuery(List.of("drop table chunk;", "a & b", "''")))
+                .isEqualTo("droptablechunk | ab");
+        assertThat(ChunkRepository.tsQuery(List.of("dup", "dup"))).isEqualTo("dup");
+        assertThat(ChunkRepository.tsQuery(List.of("!!!"))).isEmpty();
+    }
+
+    @Test
     void splitsQuestionsIntoUsefulTerms() {
         assertThat(ChunkSearch.terms("Where is send_static_file() defined?"))
                 .containsExactly("where", "send_static_file", "defined");

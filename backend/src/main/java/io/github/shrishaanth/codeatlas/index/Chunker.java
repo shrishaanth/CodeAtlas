@@ -15,6 +15,12 @@ import java.util.List;
 public final class Chunker {
 
     public static final int MAX_CHUNK_LINES = 200;
+    /**
+     * A class longer than this is indexed as its methods. It is well below {@link #MAX_CHUNK_LINES}
+     * because an answer citing a 190-line excerpt cannot be checked in any useful way: the model
+     * then invents line numbers inside it (seen with itsdangerous' 191-line Signer class).
+     */
+    public static final int SPLIT_CLASS_LINES = 60;
     public static final int TEXT_WINDOW_LINES = 100;
     /** Below this, a chunk carries too little to be worth retrieving on its own. */
     public static final int MIN_CHUNK_LINES = 2;
@@ -38,7 +44,7 @@ public final class Chunker {
         int covered = 0; // last line already placed in a chunk
         for (PySymbol s : top) {
             addBetween(out, file, lines, covered + 1, s.startLine() - 1, fileScore);
-            if (s.kind().equals("class") && s.endLine() - s.startLine() + 1 > MAX_CHUNK_LINES) {
+            if (s.kind().equals("class") && s.endLine() - s.startLine() + 1 > SPLIT_CLASS_LINES) {
                 // A long class is more useful as its methods: each is a separate, citable answer.
                 out.addAll(methodsOf(file, lines, parsed, s, fileScore));
             } else {

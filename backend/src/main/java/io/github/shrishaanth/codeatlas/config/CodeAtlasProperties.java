@@ -59,7 +59,8 @@ public record CodeAtlasProperties(String version, Cors cors, Analysis analysis, 
                      int maxContextChars, int maxQuestionsPerHour) {
         public Qa {
             if (baseUrl == null || baseUrl.isBlank()) baseUrl = "http://localhost:11434/v1";
-            if (maxTokens <= 0) maxTokens = 600;
+            // Reasoning models spend output tokens thinking before they write, so keep room for both.
+            if (maxTokens <= 0) maxTokens = 1500;
             if (timeoutSeconds <= 0) timeoutSeconds = 60;
             if (maxContextChars <= 0) maxContextChars = 12_000;
             if (maxQuestionsPerHour < 0) maxQuestionsPerHour = 0;

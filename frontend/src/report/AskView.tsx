@@ -110,19 +110,32 @@ export function AskView({ report, analysisId, onSelect }: Props) {
 }
 
 function AnswerPanel({ answer, report, onSelect }: { answer: Answer; report: Report; onSelect: (p: string) => void }) {
-  const unverified = answer.citations.filter((c) => !c.verified)
+  const exact = answer.citations.filter((c) => c.status === 'exact')
+  const inside = answer.citations.filter((c) => c.status === 'inside')
+  const unsupported = answer.citations.filter((c) => c.status === 'unsupported')
   return (
     <div className="stack">
       {answer.answer && (
         <section className="card">
           <p className="answer">{answer.answer}</p>
           <p className="muted small">
-            Written by {answer.model} from the excerpts below.{' '}
-            {answer.citations.length > 0 &&
-              (unverified.length === 0
-                ? `All ${answer.citations.length} citations point into those excerpts.`
-                : `${unverified.length} of ${answer.citations.length} citations do not point into them: ` +
-                  `${unverified.map((c) => `${c.path}:${c.startLine}`).join(', ')}. Treat those as unsupported.`)}
+            Written by {answer.model} from the excerpts below. Citations checked:{' '}
+            {exact.length > 0 && <span className="status-ok">{exact.length} match an excerpt exactly</span>}
+            {exact.length > 0 && (inside.length > 0 || unsupported.length > 0) && ' · '}
+            {inside.length > 0 && (
+              <span className="status-waiting">
+                {inside.length} fall inside an excerpt, so the excerpt is real but those exact line numbers are
+                the model&apos;s own and may be off
+              </span>
+            )}
+            {inside.length > 0 && unsupported.length > 0 && ' · '}
+            {unsupported.length > 0 && (
+              <span className="status-error">
+                {unsupported.length} point outside the excerpts entirely; treat those claims as unsupported (
+                {unsupported.map((c) => `${c.path}:${c.startLine}`).join(', ')})
+              </span>
+            )}
+            {answer.citations.length === 0 && 'the answer cited nothing, so nothing could be checked'}
           </p>
         </section>
       )}

@@ -32,7 +32,9 @@ public class QaService {
             You help a developer understand an unfamiliar codebase.
             Rules:
             - Answer only from the numbered excerpts below. They are the whole of your knowledge here.
-            - Cite the file and line for every claim, as path:line or path:line-line, e.g. src/app/main.py:42.
+            - Cite every claim with the exact location printed above the excerpt you used, copied
+              character for character, e.g. src/app/main.py:42-90. Never write a narrower range: you
+              cannot count lines inside an excerpt, and a made-up range is worse than a broad one.
             - If the excerpts do not answer the question, say so plainly and name what is missing.
             - Be concise: at most 150 words. No preamble, no apology, no invented file names.
             """;
@@ -63,7 +65,8 @@ public class QaService {
     /** The code that matches a question, best first, with no model involved. */
     public List<ChunkSearch.Result> search(UUID analysisId, String query, int limit) {
         if (query == null || query.isBlank()) return List.of();
-        List<ChunkRepository.Match> matches = chunks.search(analysisId, query, ChunkSearch.CANDIDATES);
+        List<ChunkRepository.Match> matches = chunks.search(analysisId, ChunkSearch.terms(query),
+                ChunkSearch.CANDIDATES);
         return ChunkSearch.rank(matches, query, Math.min(Math.max(limit, 1), 20));
     }
 

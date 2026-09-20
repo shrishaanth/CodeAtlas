@@ -233,7 +233,9 @@ Findings are capped at 50 per kind, most significant first; the report says how 
 Answers must be checkable, so the retrieval step is the product and the language model is optional.
 
 **Chunks.** Python files are split by symbol: every top-level function and class becomes one chunk,
-with its line range; a class larger than 200 lines is split into its methods instead. Code outside
+with its line range; a class longer than **60 lines** is split into its methods instead, each its own
+chunk. That threshold is low on purpose: a model given a 190-line excerpt invents narrower line
+numbers inside it, and those are usually wrong (seen with itsdangerous' `Signer` class). Code outside
 any symbol (imports, module-level constants) becomes one chunk per file, capped at 200 lines.
 Non-Python text files are split into 100-line windows. Test files and generated files are indexed
 too, but ranked lower. Every chunk keeps its path and exact line range, so a citation can be checked.
@@ -245,13 +247,30 @@ names and paths. The score combines:
 |---|---:|---|
 | text match (`ts_rank_cd`, normalized) | 1.0 | the main signal |
 | exact symbol-name match | +0.5 | "where is `send_static_file`" should find the definition |
+| a word of the symbol matches | +0.35 | "signature" should find `get_signature`, "signing" should find `sign`; words are compared after trimming `-ing`, `-ed`, `-es`, `-s` |
 | path match | +0.3 | "the cli module" should find `cli.py` |
 | reading-order score of the file | +0.2 | prefer central files when several match |
 | test or generated file | -0.3 | usually not the answer |
 
 The top 8 chunks are returned, at most 3 from one file, so an answer draws on several places.
 
+The full-text query matches **any** word of the question, not all of them: requiring all of them
+finds nothing for "where is fetch_movie defined", because code contains no "where" or "defined".
+Ranking decides relevance.
+
 **Answers.** When a language model is configured, it receives only those chunks and must answer from
-them, citing `path:line`. Every citation is then checked against the chunks that were actually
-retrieved: a citation outside them is shown as unverified. Without a model configured, the search
-results are shown on their own, which is the same evidence without the prose.
+them, citing the exact location printed above each excerpt. Every citation is then checked and shown
+as one of three states:
+
+| State | Meaning |
+|---|---|
+| `exact` | It names an excerpt that was given, so it points at real code. |
+| `inside` | The lines fall within an excerpt but are narrower than it. The excerpt is real; those exact line numbers are the model's own arithmetic and are often wrong. |
+| `unsupported` | The lines are outside everything the model was given. Treat the claim as unsupported. |
+
+This checks *where* a citation points, not whether the prose is a fair summary of it; the excerpt is
+shown next to the answer so a reader can judge that.
+
+Without a model configured, the search results are shown on their own, which is the same evidence
+without the prose. Transient failures (HTTP 429 and 5xx, empty replies) are retried twice before
+falling back to search results.

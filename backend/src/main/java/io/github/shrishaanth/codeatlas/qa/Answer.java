@@ -19,8 +19,12 @@ import java.util.List;
 public record Answer(String question, String answer, String model, String note, List<Citation> citations,
                      List<Source> sources) {
 
-    /** @param verified whether the cited line is inside one of the chunks the model was given */
-    public record Citation(String path, int startLine, Integer endLine, boolean verified) {
+    /** @param status {@code exact}, {@code inside} or {@code unsupported}; see {@link Citations#status} */
+    public record Citation(String path, int startLine, Integer endLine, String status) {
+
+        public static final String EXACT = "exact";
+        public static final String INSIDE = "inside";
+        public static final String UNSUPPORTED = "unsupported";
     }
 
     public record Source(String path, int startLine, int endLine, String kind, String symbol, String text,

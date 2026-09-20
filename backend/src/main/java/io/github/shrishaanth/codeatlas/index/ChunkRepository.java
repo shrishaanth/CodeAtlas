@@ -52,17 +52,33 @@ public class ChunkRepository {
     /**
      * Full-text candidates for a question, most relevant first. The final ranking, which adds the
      * structural boosts, happens in {@link ChunkSearch}.
+     *
+     * @param terms words of the question; a chunk matching any of them is a candidate, and
+     *              {@code ts_rank_cd} puts the ones matching more of them first. Requiring all words
+     *              (what {@code websearch_to_tsquery} does) finds nothing for a question like
+     *              "where is fetch_movie defined", because code does not contain "where" or "defined".
      */
-    public List<Match> search(UUID analysisId, String query, int limit) {
+    public List<Match> search(UUID analysisId, List<String> terms, int limit) {
+        String query = tsQuery(terms);
+        if (query.isEmpty()) return List.of();
         return jdbc.sql("""
                         SELECT path, start_line, end_line, kind, symbol, is_test, is_generated, file_score, body,
                                ts_rank_cd(tsv, q) AS text_score
-                        FROM chunk, websearch_to_tsquery('simple', :query) q
+                        FROM chunk, to_tsquery('simple', :query) q
                         WHERE analysis_id = :id AND tsv @@ q
                         ORDER BY text_score DESC
                         LIMIT :limit""")
                 .param("id", analysisId).param("query", query).param("limit", limit)
                 .query(MATCH).list();
+    }
+
+    /** Terms joined with OR, stripped to word characters so nothing can be injected into the query. */
+    static String tsQuery(List<String> terms) {
+        return terms.stream()
+                .map(t -> t.replaceAll("[^a-zA-Z0-9_]", ""))
+                .filter(t -> !t.isEmpty())
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(" | "));
     }
 
     public int countFor(UUID analysisId) {

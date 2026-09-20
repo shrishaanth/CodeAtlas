@@ -98,8 +98,12 @@ export interface AnswerCitation {
   path: string
   startLine: number
   endLine: number | null
-  /** false means the cited lines were not among the code the model was given */
-  verified: boolean
+  /**
+   * exact: names an excerpt the model was given, so it points at real code.
+   * inside: lines within an excerpt; the excerpt is real but the exact lines are the model's guess.
+   * unsupported: outside everything the model was given.
+   */
+  status: 'exact' | 'inside' | 'unsupported'
 }
 
 export interface Answer {
