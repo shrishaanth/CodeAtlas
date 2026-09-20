@@ -1,0 +1,23 @@
+# Repositories used to evaluate CodeAtlas (see docs/evaluation.md).
+# Chosen before any results were seen: popular Python projects across a range of sizes and
+# organisations, all with public documentation a newcomer would read.
+https://github.com/pallets/flask
+https://github.com/pallets/click
+https://github.com/pallets/itsdangerous
+https://github.com/pallets/jinja
+https://github.com/pallets/werkzeug
+https://github.com/psf/requests
+https://github.com/psf/black
+https://github.com/encode/httpx
+https://github.com/encode/starlette
+https://github.com/python-attrs/attrs
+https://github.com/tqdm/tqdm
+https://github.com/jd/tenacity
+https://github.com/marshmallow-code/marshmallow
+https://github.com/pytest-dev/pytest
+https://github.com/python-poetry/poetry
+https://github.com/pydantic/pydantic
+https://github.com/fastapi/fastapi
+https://github.com/scrapy/scrapy
+https://github.com/celery/celery
+https://github.com/sqlalchemy/alembic
