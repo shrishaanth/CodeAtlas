@@ -23,14 +23,19 @@ import java.util.regex.Pattern;
  */
 public final class GroundTruth {
 
-    /** Documentation files that tell a newcomer where to look. */
+    /** Narrative documentation: guidance at the root, plus prose pages under docs/. */
     private static final Pattern DOC_FILE = Pattern.compile(
-            "^(readme|contributing|architecture|hacking|development|design|internals)(\\.[a-z]+)?$|"
-                    + "^docs?/(contributing|architecture|development|design|internals|structure|overview)"
-                    + "[a-z0-9_/-]*(\\.[a-z]+)?$",
+            "^(readme|contributing|architecture|hacking|development|design|internals)(\\.(md|rst|txt))?$|"
+                    + "^docs?/.*\\.(md|rst|txt)$",
             Pattern.CASE_INSENSITIVE);
-    /** Path-like tokens: at least one slash or a .py suffix, e.g. src/flask/app.py, flask/cli.py. */
+    /** Changelogs mention files because they changed; reference pages list every module. Neither is guidance. */
+    private static final Pattern NOT_GUIDANCE = Pattern.compile(
+            "changelog|changes|history|news|release|upgrading|migration|api|reference|autoapi|_build|_static",
+            Pattern.CASE_INSENSITIVE);
+    /** Path-like tokens ending in .py, e.g. src/flask/app.py or cli.py. */
     private static final Pattern PATH_TOKEN = Pattern.compile("[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\\.py\\b");
+    /** Dotted module names as Python docs write them: flask.cli, scrapy.spiders.crawl, :mod:`x.y`. */
+    private static final Pattern MODULE_TOKEN = Pattern.compile("\\b[a-z_][a-z0-9_]*(?:\\.[a-z_][a-z0-9_]*)+\\b");
     private static final Pattern CODEOWNERS_LINE = Pattern.compile("^\\s*([^#\\s]+)\\s+(.+?)\\s*$");
     private static final Pattern OWNER_HANDLE = Pattern.compile("@([A-Za-z0-9-]+(?:/[A-Za-z0-9-]+)?)");
 
@@ -58,14 +63,42 @@ public final class GroundTruth {
     /** Files named by path in the project's own documentation. */
     static Set<String> docsMentioned(Report report, java.util.function.Function<String, String> text,
                                      Set<String> rankable) {
+        Map<String, String> dotted = dottedNames(rankable);
         Set<String> out = new TreeSet<>();
         for (Report.FileEntry f : report.files()) {
-            if (!DOC_FILE.matcher(f.path()).matches()) continue;
-            Matcher m = PATH_TOKEN.matcher(text.apply(f.path()));
+            if (!DOC_FILE.matcher(f.path()).matches() || NOT_GUIDANCE.matcher(f.path()).find()) continue;
+            String content = text.apply(f.path());
+            Matcher m = PATH_TOKEN.matcher(content);
             while (m.find()) {
                 resolveMention(m.group(), rankable).ifPresent(out::add);
             }
+            Matcher d = MODULE_TOKEN.matcher(content);
+            while (d.find()) {
+                String path = dotted.get(d.group());
+                if (path != null) out.add(path);
+            }
         }
+        return out;
+    }
+
+    /**
+     * Dotted names that point at exactly one rankable file, e.g. "flask.cli" for src/flask/cli.py.
+     * Names shared by several files are left out, and single words are never matched this way.
+     */
+    static Map<String, String> dottedNames(Set<String> rankable) {
+        Map<String, Set<String>> candidates = new HashMap<>();
+        for (String path : rankable) {
+            String full = path.replaceAll("(/__init__)?\\.pyi?$", "").replace('/', '.');
+            String[] parts = full.split("\\.");
+            for (int start = 0; start <= parts.length - 2; start++) {
+                String name = String.join(".", java.util.Arrays.copyOfRange(parts, start, parts.length));
+                candidates.computeIfAbsent(name, k -> new HashSet<>()).add(path);
+            }
+        }
+        Map<String, String> out = new HashMap<>();
+        candidates.forEach((name, paths) -> {
+            if (paths.size() == 1) out.put(name, paths.iterator().next());
+        });
         return out;
     }
 

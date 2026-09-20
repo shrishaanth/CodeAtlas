@@ -40,6 +40,30 @@ class GroundTruthTest {
     }
 
     @Test
+    void findsModulesWrittenAsDottedNames() {
+        Report report = reportWith("docs/quickstart.rst", "docs/api.rst", "docs/changelog.rst",
+                "src/flask/cli.py", "src/flask/app.py");
+        Map<String, String> text = Map.of(
+                "docs/quickstart.rst", "The :mod:`flask.cli` module powers the command line.",
+                "docs/api.rst", "Everything: flask.app, flask.cli",          // reference page, not guidance
+                "docs/changelog.rst", "Changed flask.app for release 3.0");  // changelog, not guidance
+
+        Set<String> mentioned = GroundTruth.docsMentioned(report, p -> text.getOrDefault(p, ""),
+                Set.of("src/flask/cli.py", "src/flask/app.py"));
+
+        assertThat(mentioned).containsExactly("src/flask/cli.py");
+    }
+
+    @Test
+    void dottedNamesMustPointAtExactlyOneFile() {
+        Map<String, String> names = GroundTruth.dottedNames(Set.of("a/util.py", "b/util.py", "src/flask/cli.py"));
+
+        assertThat(names).containsEntry("flask.cli", "src/flask/cli.py");
+        assertThat(names).containsEntry("src.flask.cli", "src/flask/cli.py");
+        assertThat(names).doesNotContainKeys("util", "cli");
+    }
+
+    @Test
     void ignoresMentionsThatCouldBeSeveralFiles() {
         Report report = reportWith("README.md", "a/util.py", "b/util.py", "a/unique.py");
         Map<String, String> text = Map.of("README.md", "See util.py and unique.py");

@@ -1,7 +1,8 @@
 # Metrics
 
 How every computed number in the report is defined. If the code and this file disagree, it is a bug.
-Weights marked *initial* are guesses to be calibrated in M4 against baselines, not tuned values.
+The reading-order weights come from the measured comparison in [docs/evaluation.md](evaluation.md).
+Thresholds marked *initial* are still guesses: nothing has measured them.
 
 ## Which files are analyzed
 - Files tracked by git at the analyzed commit (`HEAD`). Untracked and ignored files are never seen.
@@ -55,31 +56,36 @@ An import becomes an edge only if it resolves to a file in the repository. Every
 Known gaps: imports built at runtime (`importlib.import_module(name)`), `sys.path` manipulation,
 and conditional imports are all treated like normal imports if they are literal, and missed if not.
 
-## Reading order (v1)
-The goal: a newcomer should read the files that the rest of the code depends on and that are
-actively worked on. v1 ranks files by importance. It does not yet order them by dependency
-(read foundations before the files that use them); that is an M4 experiment.
+## Reading order (v2)
+The goal: a newcomer should read the files that shape the codebase and that are actively worked on.
 
-**Candidates:** Python files that are not tests and have at least 5 non-blank lines (*initial* threshold;
-it drops empty `__init__.py` files, which would otherwise rank high on imports alone, but also tiny
-real modules, so M4 should check what it costs).
+**Candidates:** Python files that are not tests and have at least 5 non-blank lines (this drops empty
+`__init__.py` files, which would otherwise rank high on imports alone).
 
 For each candidate file `f`, over the graph of resolved import edges between non-test files:
 
 | Part | Definition | Normalization to 0..1 |
 |---|---|---|
-| `centrality` | PageRank with edges pointing from importer to imported file, damping 0.85, 50 iterations. A file is central if central files import it. | divide by the maximum |
-| `fanIn` | Number of distinct non-test files that import `f` | `log(1+x) / log(1+max)` |
 | `churn` | Number of non-merge commits that changed `f`, following renames | `log(1+x) / log(1+max)` |
+| `reach` | PageRank with the import edges **reversed**, damping 0.85, 50 iterations. High for files that pull in much of the codebase, directly or indirectly: entry points and orchestrators. | divide by the maximum |
+| `fanIn` | Number of distinct non-test files that import `f` | `log(1+x) / log(1+max)` |
 
 ```
-score = 0.5 * centrality + 0.3 * fanIn + 0.2 * churn      (initial weights)
+score = 0.55 * churn + 0.30 * reach + 0.15 * fanIn - 0.20 if the module is private
 ```
-Ties are broken by path, so the order is deterministic. Logs dampen a few very large values
-(one file imported by 300 others should not flatten everyone else to zero).
+A **private module** is one whose file name starts with a single underscore (`_compat.py`): an
+implementation detail by convention. Ties are broken by path, so the order is deterministic.
+Logs dampen a few very large values (one file imported by 300 others should not flatten everyone else).
 
-**Baselines** for M4: rank by file size, by raw fan-in, and by raw commit count. If the score does
-not beat these on the evaluation set, the report must say so.
+**Where these weights come from.** v1 used `0.5 * centrality + 0.3 * fanIn + 0.2 * churn`, with
+centrality being ordinary PageRank (high for files that *everything depends on*). Measured against
+independent sources it was no better than sorting by file size, and it put low-level shims such as
+click's `_compat.py` at the top. The weights above were searched on half the evaluation repositories
+and then measured on the other half, which had not been used for the search. Ordinary centrality
+scored zero weight in every good variant and was dropped. Full method and numbers:
+[docs/evaluation.md](evaluation.md).
+
+**Known wart:** `docs/conf.py` and similar Python files outside the product code are still ranked.
 
 ## Git history
 - Commits are walked from `HEAD`, newest first, up to `maxCommits` (default 20,000). If the cap is hit,

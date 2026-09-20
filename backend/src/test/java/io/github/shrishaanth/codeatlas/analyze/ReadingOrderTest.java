@@ -41,28 +41,50 @@ class ReadingOrderTest {
     }
 
     @Test
-    void ranksByWeightedPartsAndExplainsEachItem() {
+    void ranksByChurnReachAndFanInAndExplainsEachItem() {
         ImportGraph g = new ImportGraph();
-        g.addEdge("app.py", "models.py");
+        g.addEdge("app.py", "models.py");     // app pulls in models
         g.addEdge("views.py", "models.py");
-        g.addEdge("views.py", "app.py");
+        g.addEdge("views.py", "app.py");      // views pulls in app and, through it, models
         g.addNode("script.py");
 
         List<Report.ReadingItem> items = ReadingOrder.rank(g,
                 List.of("app.py", "models.py", "script.py", "views.py"),
                 Map.of("app.py", 50, "models.py", 10, "views.py", 5, "script.py", 1));
 
+        // app.py leads on churn; models.py follows on fan-in; views.py has the highest reach but
+        // little history, and script.py has nothing.
         assertThat(items).extracting(Report.ReadingItem::path)
-                .containsExactly("models.py", "app.py", "views.py", "script.py");
+                .containsExactly("app.py", "models.py", "views.py", "script.py");
+        Map<String, Double> reach = new java.util.HashMap<>();
+        items.forEach(i -> reach.put(i.path(), i.parts().get("reach")));
+        assertThat(reach.get("views.py")).as("pulls in the most").isEqualTo(1.0);
+        assertThat(reach.get("models.py")).as("pulls in nothing").isLessThan(reach.get("app.py"));
         Report.ReadingItem top = items.get(0);
         assertThat(top.rank()).isEqualTo(1);
-        assertThat(top.parts()).containsKeys("centrality", "fanIn", "churn");
-        assertThat(top.parts().get("centrality")).isEqualTo(1.0);
-        assertThat(top.parts().get("fanIn")).isEqualTo(1.0);
-        assertThat(top.reasons()).containsExactly("Imported by 2 non-test files", "Changed in 10 commits");
-        double expected = ReadingOrder.W_CENTRALITY * 1.0 + ReadingOrder.W_FAN_IN * 1.0
-                + ReadingOrder.W_CHURN * ReadingOrder.logNorm(10, 50);
+        assertThat(top.parts()).containsOnlyKeys("churn", "reach", "fanIn");
+        assertThat(top.parts().get("churn")).isEqualTo(1.0);
+        assertThat(top.reasons()).contains("Changed in 50 commits", "Imported by 1 non-test file");
+        double expected = ReadingOrder.W_CHURN * 1.0
+                + ReadingOrder.W_REACH * top.parts().get("reach")
+                + ReadingOrder.W_FAN_IN * ReadingOrder.logNorm(1, 2);
         assertThat(top.score()).isCloseTo(expected, within(0.001));
+    }
+
+    @Test
+    void privateModulesRankLowerThanTheirPublicEquivalent() {
+        ImportGraph g = new ImportGraph();
+        g.addEdge("public.py", "_compat.py");
+        g.addNode("other.py");
+
+        List<Report.ReadingItem> items = ReadingOrder.rank(g, List.of("_compat.py", "public.py", "other.py"),
+                Map.of("_compat.py", 20, "public.py", 20, "other.py", 1));
+
+        assertThat(items).extracting(Report.ReadingItem::path).startsWith("public.py");
+        Report.ReadingItem privateItem = items.stream().filter(i -> i.path().equals("_compat.py")).findFirst().orElseThrow();
+        assertThat(privateItem.reasons()).contains("Private module, ranked lower");
+        assertThat(privateItem.score())
+                .isCloseTo(rawScore(privateItem) - ReadingOrder.PRIVATE_PENALTY, within(0.001));
     }
 
     @Test
@@ -74,5 +96,11 @@ class ReadingOrderTest {
         List<Report.ReadingItem> items = ReadingOrder.rank(g, List.of("b.py", "a.py"), Map.of());
 
         assertThat(items).extracting(Report.ReadingItem::path).containsExactly("a.py", "b.py");
+    }
+
+    private static double rawScore(Report.ReadingItem item) {
+        return ReadingOrder.W_CHURN * item.parts().get("churn")
+                + ReadingOrder.W_REACH * item.parts().get("reach")
+                + ReadingOrder.W_FAN_IN * item.parts().get("fanIn");
     }
 }

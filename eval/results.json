@@ -1,0 +1,595 @@
+{
+  "runAt" : "2026-09-20T02:55:07.620945900Z",
+  "toolVersion" : "eval",
+  "repos" : [ {
+    "repo" : "pallets/flask",
+    "commits" : 5557,
+    "people" : 837,
+    "pythonFiles" : 83,
+    "candidates" : 32,
+    "analysisMillis" : 7588,
+    "docsMentioned" : 10,
+    "docsPercentile" : {
+      "codeatlas" : 0.419,
+      "size" : 0.526,
+      "fan-in" : 0.355,
+      "commits" : 0.484,
+      "random" : 0.519
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 2,
+      "size" : 3,
+      "fan-in" : 1,
+      "commits" : 3,
+      "random" : 3
+    },
+    "newcomerFiles" : 24,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.61,
+      "size" : 0.591,
+      "fan-in" : 0.578,
+      "commits" : 0.624,
+      "random" : 0.527
+    },
+    "findings" : 4
+  }, {
+    "repo" : "pallets/click",
+    "commits" : 3362,
+    "people" : 452,
+    "pythonFiles" : 90,
+    "candidates" : 30,
+    "analysisMillis" : 3504,
+    "docsMentioned" : 5,
+    "docsPercentile" : {
+      "codeatlas" : 0.821,
+      "size" : 0.759,
+      "fan-in" : 0.683,
+      "commits" : 0.8,
+      "random" : 0.483
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 4,
+      "size" : 4,
+      "fan-in" : 4,
+      "commits" : 4,
+      "random" : 2
+    },
+    "newcomerFiles" : 24,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.583,
+      "size" : 0.55,
+      "fan-in" : 0.545,
+      "commits" : 0.579,
+      "random" : 0.517
+    },
+    "findings" : 1
+  }, {
+    "repo" : "pallets/itsdangerous",
+    "commits" : 677,
+    "people" : 41,
+    "pythonFiles" : 15,
+    "candidates" : 9,
+    "analysisMillis" : 430,
+    "docsMentioned" : 6,
+    "docsPercentile" : {
+      "codeatlas" : 0.563,
+      "size" : 0.667,
+      "fan-in" : 0.667,
+      "commits" : 0.417,
+      "random" : 0.646
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 6,
+      "size" : 6,
+      "fan-in" : 6,
+      "commits" : 6,
+      "random" : 6
+    },
+    "newcomerFiles" : 6,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.542,
+      "size" : 0.521,
+      "fan-in" : 0.396,
+      "commits" : 0.688,
+      "random" : 0.479
+    },
+    "findings" : 0
+  }, {
+    "repo" : "pallets/jinja",
+    "commits" : 2949,
+    "people" : 333,
+    "pythonFiles" : 60,
+    "candidates" : 34,
+    "analysisMillis" : 3624,
+    "docsMentioned" : 10,
+    "docsPercentile" : {
+      "codeatlas" : 0.642,
+      "size" : 0.621,
+      "fan-in" : 0.548,
+      "commits" : 0.606,
+      "random" : 0.564
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 5,
+      "size" : 5,
+      "fan-in" : 4,
+      "commits" : 5,
+      "random" : 4
+    },
+    "newcomerFiles" : 28,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.552,
+      "size" : 0.548,
+      "fan-in" : 0.527,
+      "commits" : 0.552,
+      "random" : 0.504
+    },
+    "findings" : 2
+  }, {
+    "repo" : "pallets/werkzeug",
+    "commits" : 6036,
+    "people" : 507,
+    "pythonFiles" : 139,
+    "candidates" : 94,
+    "analysisMillis" : 7600,
+    "docsMentioned" : 22,
+    "docsPercentile" : {
+      "codeatlas" : 0.684,
+      "size" : 0.685,
+      "fan-in" : 0.557,
+      "commits" : 0.69,
+      "random" : 0.465
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 8,
+      "size" : 4,
+      "fan-in" : 8,
+      "commits" : 9,
+      "random" : 1
+    },
+    "newcomerFiles" : 63,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.609,
+      "size" : 0.575,
+      "fan-in" : 0.531,
+      "commits" : 0.607,
+      "random" : 0.527
+    },
+    "findings" : 16
+  }, {
+    "repo" : "psf/requests",
+    "commits" : 6494,
+    "people" : 773,
+    "pythonFiles" : 37,
+    "candidates" : 22,
+    "analysisMillis" : 4947,
+    "docsMentioned" : 6,
+    "docsPercentile" : {
+      "codeatlas" : 0.746,
+      "size" : 0.81,
+      "fan-in" : 0.714,
+      "commits" : 0.746,
+      "random" : 0.452
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 5,
+      "size" : 5,
+      "fan-in" : 5,
+      "commits" : 5,
+      "random" : 2
+    },
+    "newcomerFiles" : 20,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.548,
+      "size" : 0.524,
+      "fan-in" : 0.505,
+      "commits" : 0.543,
+      "random" : 0.498
+    },
+    "ownership" : {
+      "directoriesWithOwners" : 9,
+      "linkedDirectories" : 9,
+      "topOwnerMatches" : 6,
+      "topThreeMatches" : 8
+    },
+    "findings" : 0
+  }, {
+    "repo" : "psf/black",
+    "commits" : 2323,
+    "people" : 550,
+    "pythonFiles" : 350,
+    "candidates" : 50,
+    "analysisMillis" : 5869,
+    "docsMentioned" : 3,
+    "docsPercentile" : {
+      "codeatlas" : 0.68,
+      "size" : 0.585,
+      "fan-in" : 0.456,
+      "commits" : 0.612,
+      "random" : 0.571
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 2,
+      "size" : 1,
+      "fan-in" : 1,
+      "commits" : 1,
+      "random" : 1
+    },
+    "newcomerFiles" : 40,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.589,
+      "size" : 0.51,
+      "fan-in" : 0.569,
+      "commits" : 0.596,
+      "random" : 0.481
+    },
+    "findings" : 12
+  }, {
+    "repo" : "encode/httpx",
+    "commits" : 1523,
+    "people" : 242,
+    "pythonFiles" : 60,
+    "candidates" : 22,
+    "analysisMillis" : 2535,
+    "docsMentioned" : 1,
+    "newcomerFiles" : 21,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.503,
+      "size" : 0.522,
+      "fan-in" : 0.519,
+      "commits" : 0.519,
+      "random" : 0.522
+    },
+    "findings" : 1
+  }, {
+    "repo" : "encode/starlette",
+    "commits" : 1739,
+    "people" : 348,
+    "pythonFiles" : 84,
+    "candidates" : 46,
+    "analysisMillis" : 2758,
+    "docsMentioned" : 27,
+    "docsPercentile" : {
+      "codeatlas" : 0.642,
+      "size" : 0.516,
+      "fan-in" : 0.489,
+      "commits" : 0.631,
+      "random" : 0.472
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 9,
+      "size" : 7,
+      "fan-in" : 7,
+      "commits" : 9,
+      "random" : 5
+    },
+    "newcomerFiles" : 30,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.664,
+      "size" : 0.571,
+      "fan-in" : 0.518,
+      "commits" : 0.676,
+      "random" : 0.495
+    },
+    "findings" : 23
+  }, {
+    "repo" : "python-attrs/attrs",
+    "commits" : 1841,
+    "people" : 190,
+    "pythonFiles" : 66,
+    "candidates" : 27,
+    "analysisMillis" : 2476,
+    "docsMentioned" : 0,
+    "newcomerFiles" : 20,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.633,
+      "size" : 0.567,
+      "fan-in" : 0.525,
+      "commits" : 0.61,
+      "random" : 0.531
+    },
+    "findings" : 20
+  }, {
+    "repo" : "tqdm/tqdm",
+    "commits" : 2132,
+    "people" : 139,
+    "pythonFiles" : 68,
+    "candidates" : 45,
+    "analysisMillis" : 2462,
+    "docsMentioned" : 21,
+    "docsPercentile" : {
+      "codeatlas" : 0.687,
+      "size" : 0.701,
+      "fan-in" : 0.554,
+      "commits" : 0.585,
+      "random" : 0.5
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 9,
+      "size" : 9,
+      "fan-in" : 6,
+      "commits" : 7,
+      "random" : 4
+    },
+    "newcomerFiles" : 25,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.607,
+      "size" : 0.525,
+      "fan-in" : 0.524,
+      "commits" : 0.629,
+      "random" : 0.528
+    },
+    "ownership" : {
+      "directoriesWithOwners" : 7,
+      "linkedDirectories" : 7,
+      "topOwnerMatches" : 0,
+      "topThreeMatches" : 2
+    },
+    "findings" : 11
+  }, {
+    "repo" : "jd/tenacity",
+    "commits" : 615,
+    "people" : 112,
+    "pythonFiles" : 20,
+    "candidates" : 13,
+    "analysisMillis" : 732,
+    "docsMentioned" : 0,
+    "newcomerFiles" : 12,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.535,
+      "size" : 0.486,
+      "fan-in" : 0.507,
+      "commits" : 0.542,
+      "random" : 0.465
+    },
+    "findings" : 2
+  }, {
+    "repo" : "marshmallow-code/marshmallow",
+    "commits" : 3748,
+    "people" : 222,
+    "pythonFiles" : 38,
+    "candidates" : 18,
+    "analysisMillis" : 3940,
+    "docsMentioned" : 12,
+    "docsPercentile" : {
+      "codeatlas" : 0.544,
+      "size" : 0.559,
+      "fan-in" : 0.525,
+      "commits" : 0.529,
+      "random" : 0.578
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 7,
+      "size" : 7,
+      "fan-in" : 8,
+      "commits" : 7,
+      "random" : 8
+    },
+    "newcomerFiles" : 16,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.555,
+      "size" : 0.526,
+      "fan-in" : 0.551,
+      "commits" : 0.537,
+      "random" : 0.482
+    },
+    "findings" : 1
+  }, {
+    "repo" : "pytest-dev/pytest",
+    "commits" : 17778,
+    "people" : 1111,
+    "pythonFiles" : 282,
+    "candidates" : 119,
+    "analysisMillis" : 22848,
+    "docsMentioned" : 17,
+    "docsPercentile" : {
+      "codeatlas" : 0.728,
+      "size" : 0.684,
+      "fan-in" : 0.715,
+      "commits" : 0.713,
+      "random" : 0.539
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 5,
+      "size" : 5,
+      "fan-in" : 5,
+      "commits" : 5,
+      "random" : 3
+    },
+    "newcomerFiles" : 75,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.658,
+      "size" : 0.659,
+      "fan-in" : 0.564,
+      "commits" : 0.664,
+      "random" : 0.473
+    },
+    "findings" : 48
+  }, {
+    "repo" : "python-poetry/poetry",
+    "commits" : 3876,
+    "people" : 668,
+    "pythonFiles" : 451,
+    "candidates" : 163,
+    "analysisMillis" : 9770,
+    "docsMentioned" : 7,
+    "docsPercentile" : {
+      "codeatlas" : 0.639,
+      "size" : 0.462,
+      "fan-in" : 0.749,
+      "commits" : 0.556,
+      "random" : 0.557
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 2,
+      "size" : 1,
+      "fan-in" : 1,
+      "commits" : 1,
+      "random" : 1
+    },
+    "newcomerFiles" : 103,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.646,
+      "size" : 0.6,
+      "fan-in" : 0.539,
+      "commits" : 0.651,
+      "random" : 0.491
+    },
+    "findings" : 56
+  }, {
+    "repo" : "pydantic/pydantic",
+    "commits" : 5746,
+    "people" : 795,
+    "pythonFiles" : 455,
+    "candidates" : 103,
+    "analysisMillis" : 17332,
+    "docsMentioned" : 22,
+    "docsPercentile" : {
+      "codeatlas" : 0.742,
+      "size" : 0.648,
+      "fan-in" : 0.561,
+      "commits" : 0.688,
+      "random" : 0.447
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 8,
+      "size" : 6,
+      "fan-in" : 2,
+      "commits" : 6,
+      "random" : 2
+    },
+    "newcomerFiles" : 52,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.677,
+      "size" : 0.613,
+      "fan-in" : 0.606,
+      "commits" : 0.717,
+      "random" : 0.558
+    },
+    "findings" : 64
+  }, {
+    "repo" : "fastapi/fastapi",
+    "commits" : 7713,
+    "people" : 894,
+    "pythonFiles" : 1138,
+    "candidates" : 403,
+    "analysisMillis" : 29237,
+    "docsMentioned" : 11,
+    "docsPercentile" : {
+      "codeatlas" : 0.917,
+      "size" : 0.678,
+      "fan-in" : 0.874,
+      "commits" : 0.904,
+      "random" : 0.524
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 3,
+      "size" : 2,
+      "fan-in" : 4,
+      "commits" : 2,
+      "random" : 0
+    },
+    "newcomerFiles" : 50,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.902,
+      "size" : 0.725,
+      "fan-in" : 0.719,
+      "commits" : 0.905,
+      "random" : 0.541
+    },
+    "findings" : 96
+  }, {
+    "repo" : "scrapy/scrapy",
+    "commits" : 11495,
+    "people" : 715,
+    "pythonFiles" : 504,
+    "candidates" : 187,
+    "analysisMillis" : 19700,
+    "docsMentioned" : 99,
+    "docsPercentile" : {
+      "codeatlas" : 0.567,
+      "size" : 0.586,
+      "fan-in" : 0.489,
+      "commits" : 0.564,
+      "random" : 0.48
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 9,
+      "size" : 9,
+      "fan-in" : 9,
+      "commits" : 10,
+      "random" : 6
+    },
+    "newcomerFiles" : 118,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.639,
+      "size" : 0.603,
+      "fan-in" : 0.533,
+      "commits" : 0.643,
+      "random" : 0.511
+    },
+    "findings" : 52
+  }, {
+    "repo" : "celery/celery",
+    "commits" : 13312,
+    "people" : 1472,
+    "pythonFiles" : 429,
+    "candidates" : 213,
+    "analysisMillis" : 21988,
+    "docsMentioned" : 74,
+    "docsPercentile" : {
+      "codeatlas" : 0.726,
+      "size" : 0.641,
+      "fan-in" : 0.635,
+      "commits" : 0.72,
+      "random" : 0.47
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 8,
+      "size" : 6,
+      "fan-in" : 6,
+      "commits" : 9,
+      "random" : 4
+    },
+    "newcomerFiles" : 157,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.596,
+      "size" : 0.58,
+      "fan-in" : 0.543,
+      "commits" : 0.599,
+      "random" : 0.507
+    },
+    "findings" : 54
+  }, {
+    "repo" : "sqlalchemy/alembic",
+    "commits" : 2094,
+    "people" : 227,
+    "pythonFiles" : 122,
+    "candidates" : 68,
+    "analysisMillis" : 4141,
+    "docsMentioned" : 10,
+    "docsPercentile" : {
+      "codeatlas" : 0.609,
+      "size" : 0.587,
+      "fan-in" : 0.627,
+      "commits" : 0.558,
+      "random" : 0.503
+    },
+    "docsHitsTop10" : {
+      "codeatlas" : 3,
+      "size" : 4,
+      "fan-in" : 3,
+      "commits" : 2,
+      "random" : 2
+    },
+    "newcomerFiles" : 46,
+    "newcomerPercentile" : {
+      "codeatlas" : 0.618,
+      "size" : 0.594,
+      "fan-in" : 0.547,
+      "commits" : 0.632,
+      "random" : 0.493
+    },
+    "findings" : 21
+  } ]
+}

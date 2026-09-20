@@ -36,6 +36,9 @@ import java.util.stream.Collectors;
  */
 public final class EvalCommand {
 
+    /** Fewest documentation-mentioned files a repository needs to take part in that comparison. */
+    static final int MIN_DOCS_TRUTH = 3;
+
     private EvalCommand() {
     }
 
@@ -54,11 +57,12 @@ public final class EvalCommand {
         System.err.printf("Evaluating %d repositories, clones cached in %s%n", repos.size(), cloneDir);
 
         List<EvalResult.RepoResult> results = new ArrayList<>();
+        List<Features> features = new ArrayList<>();
         for (int i = 0; i < repos.size(); i++) {
             String url = repos.get(i);
             System.err.printf("[%2d/%d] %s%n", i + 1, repos.size(), url);
             try {
-                results.add(evaluate(url, cloneDir));
+                results.add(evaluate(url, cloneDir, features));
             } catch (Exception e) {
                 System.err.println("        failed: " + e);
                 results.add(new EvalResult.RepoResult(shortName(url), String.valueOf(e.getMessage()), null, null,
@@ -70,11 +74,15 @@ public final class EvalCommand {
                 .enable(tools.jackson.databind.SerializationFeature.INDENT_OUTPUT).build();
         Files.createDirectories(out.toAbsolutePath().getParent());
         mapper.writeValue(out.toFile(), result);
-        System.err.println("wrote " + out);
+        // Per-file signals for Tuner, so formula variants can be compared without analyzing again.
+        Path featuresFile = out.resolveSibling("features.json");
+        mapper.writeValue(featuresFile.toFile(), features);
+        System.err.println("wrote " + out + " and " + featuresFile);
         System.out.println(Summary.markdown(result));
     }
 
-    private static EvalResult.RepoResult evaluate(String url, Path cloneDir) throws Exception {
+    private static EvalResult.RepoResult evaluate(String url, Path cloneDir, List<Features> features)
+            throws Exception {
         RepoSource.GitHub source = (RepoSource.GitHub) RepoSource.parse(url, false);
         Path bare = cloneDir.resolve(source.owner() + "__" + source.repo() + ".git");
         if (!Files.isDirectory(bare)) {
@@ -101,6 +109,7 @@ public final class EvalCommand {
                     .collect(Collectors.toCollection(TreeSet::new));
             GroundTruth.Truth truth = GroundTruth.collect(report, history,
                     path -> readCached(repo, cache, path), rankable);
+            features.add(Features.from(source.owner() + "/" + source.repo(), report, truth));
             return score(source, report, truth, millis);
         }
     }
@@ -123,8 +132,10 @@ public final class EvalCommand {
         Map<String, Double> docsPercentile = new LinkedHashMap<>();
         Map<String, Integer> docsHits = new LinkedHashMap<>();
         Map<String, Double> newcomerPercentile = new LinkedHashMap<>();
+        // One or two mentions are noise; a repository needs a handful before the comparison means anything.
+        boolean enoughDocs = truth.docsMentioned().size() >= MIN_DOCS_TRUTH;
         rankings.forEach((name, ranking) -> {
-            Double docs = Rankings.meanPercentile(ranking, truth.docsMentioned());
+            Double docs = enoughDocs ? Rankings.meanPercentile(ranking, truth.docsMentioned()) : null;
             if (docs != null) {
                 docsPercentile.put(name, docs);
                 docsHits.put(name, Rankings.hitsInTop(ranking, truth.docsMentioned(), Rankings.TOP_K));

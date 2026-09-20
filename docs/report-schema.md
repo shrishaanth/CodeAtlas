@@ -127,8 +127,9 @@ number of commits that changed both; there is one `cochange` edge per pair in `c
   "rank": 1,
   "path": "src/flask/app.py",
   "score": 0.87,
-  "parts": { "centrality": 0.81, "fanIn": 0.92, "churn": 0.75 },
-  "reasons": ["Imported by 18 non-test files", "Changed in 812 commits"]
+  "parts": { "churn": 0.75, "reach": 0.81, "fanIn": 0.92 },
+  "reasons": ["Changed in 812 commits", "Imported by 18 non-test files",
+              "Pulls in much of the codebase, directly or indirectly"]
 }
 ```
 The scoring formula and weights are documented in `docs/metrics.md`. Each part is already scaled to 0..1.

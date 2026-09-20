@@ -4,9 +4,10 @@ import type { ReadingItem } from './types'
 const PAGE = 25
 
 const PART_LABELS: Record<string, string> = {
-  centrality: 'Centrality',
-  fanIn: 'Fan-in',
   churn: 'Churn',
+  reach: 'Reach',
+  fanIn: 'Fan-in',
+  centrality: 'Centrality', // reports produced before reading order v2
 }
 
 interface Props {
@@ -25,8 +26,10 @@ export function ReadingOrderList({ items, selected, onSelect }: Props) {
   return (
     <div>
       <p className="muted small">
-        Files ranked by how much other code depends on them and how often they change. Each part is scaled
-        to 0–1; the score weights them 0.5 / 0.3 / 0.2. <a href="https://github.com/shrishaanth/CodeAtlas/blob/main/docs/metrics.md#reading-order-v1">How this is computed</a>
+        Files ranked by how often they change (churn), how much of the codebase they pull in (reach), and how
+        many files import them (fan-in), weighted 0.55 / 0.30 / 0.15; private modules are ranked lower. The
+        weights were chosen on one half of 20 repositories and checked on the other half.{' '}
+        <a href="https://github.com/shrishaanth/CodeAtlas/blob/main/docs/metrics.md#reading-order-v2">How this is computed and how well it works</a>
       </p>
       <ol className="reading-list">
         {items.slice(0, limit).map((item) => (

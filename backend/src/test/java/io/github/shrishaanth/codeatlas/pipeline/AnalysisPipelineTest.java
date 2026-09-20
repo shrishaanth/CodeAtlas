@@ -65,11 +65,12 @@ class AnalysisPipelineTest {
                     "app/views.py -> app/models.py",
                     "tests/test_models.py -> app/models.py");
 
-            // Tests and the empty __init__.py are not ranked; models.py is depended on most.
+            // Tests and the empty __init__.py are not ranked. models.py leads: most commits and most
+            // imported; cli.py follows because it pulls in both other modules (reach).
             assertThat(report.readingOrder()).extracting(Report.ReadingItem::path)
-                    .containsExactly("app/models.py", "app/views.py", "app/cli.py");
+                    .containsExactly("app/models.py", "app/cli.py", "app/views.py");
             assertThat(report.readingOrder().get(0).reasons())
-                    .containsExactly("Imported by 2 non-test files", "Changed in 2 commits");
+                    .containsExactly("Changed in 2 commits", "Imported by 2 non-test files");
 
             Report.FileEntry views = report.files().stream().filter(f -> f.path().equals("app/views.py")).findFirst().orElseThrow();
             assertThat(views.imports()).extracting(Report.Import::module, Report.Import::resolvedPath, Report.Import::external)
